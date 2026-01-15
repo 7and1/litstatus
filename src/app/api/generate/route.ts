@@ -5,20 +5,20 @@ import { getUserFromRequest } from "@/lib/auth";
 import { MODES, type Mode } from "@/lib/constants";
 import { getClientIp } from "@/lib/ip";
 import { getOpenAIClient } from "@/lib/openai";
-import { SYSTEM_PROMPT } from "@/lib/prompts";
+import {
+  SYSTEM_PROMPT,
+  isValidGenerateResponse,
+  type GenerateResponse,
+} from "@/lib/prompts";
 import { consumeQuota, getQuotaStatus } from "@/lib/quota";
+import {
+  LIMITS,
+  SECURITY_HEADERS,
+  validateImageSize,
+  validateTextLength,
+} from "@/lib/security";
 
-export const runtime = "edge";
-
-// Edge-compatible base64 encoding
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
+export const runtime = "nodejs";
 
 const MODE_SET = new Set(MODES.map((mode) => mode.toLowerCase()));
 
@@ -29,7 +29,7 @@ function normalizeMode(input: string | null): Mode {
   return normalized as Mode;
 }
 
-function safeJsonParse(input: string) {
+function safeJsonParse(input: string): unknown {
   try {
     return JSON.parse(input);
   } catch {
@@ -44,8 +44,8 @@ export async function POST(request: Request) {
 
     if (!user && !ip) {
       return NextResponse.json(
-        { error: "无法识别访客身份。" },
-        { status: 400 },
+        { error: "Unable to identify request." },
+        { status: 400, headers: SECURITY_HEADERS },
       );
     }
 
@@ -53,6 +53,10 @@ export async function POST(request: Request) {
     const textValue = formData.get("text");
     const modeValue = formData.get("mode");
     const imageValue = formData.get("image");
+    const langValue = formData.get("lang");
+
+    const lang = langValue === "zh" ? "zh" : "en";
+    const t = (en: string, zh: string) => (lang === "zh" ? zh : en);
 
     const mode = normalizeMode(
       typeof modeValue === "string" ? modeValue : null,
@@ -62,8 +66,29 @@ export async function POST(request: Request) {
 
     if (!text && !imageFile) {
       return NextResponse.json(
-        { error: "请输入文本或上传图片。" },
-        { status: 400 },
+        {
+          error: t(
+            "Please enter text or upload an image.",
+            "请输入文本或上传图片。",
+          ),
+        },
+        { status: 400, headers: SECURITY_HEADERS },
+      );
+    }
+
+    // Validate text length to prevent DoS
+    if (text && !validateTextLength(text, LIMITS.MAX_TEXT_LENGTH)) {
+      return NextResponse.json(
+        { error: t("Text too long.", "文本过长。") },
+        { status: 400, headers: SECURITY_HEADERS },
+      );
+    }
+
+    // Validate image size
+    if (imageFile && !validateImageSize(imageFile)) {
+      return NextResponse.json(
+        { error: t("Image too large.", "图片过大。") },
+        { status: 400, headers: SECURITY_HEADERS },
       );
     }
 
@@ -71,22 +96,32 @@ export async function POST(request: Request) {
 
     if (!status.isPro && mode !== "Standard") {
       return NextResponse.json(
-        { error: "此模式仅对 Pro 开放。" },
-        { status: 403 },
+        {
+          error: t(
+            "This mode is available for Pro only.",
+            "此模式仅对 Pro 开放。",
+          ),
+        },
+        { status: 403, headers: SECURITY_HEADERS },
       );
     }
 
     if (!status.isPro && imageFile) {
       return NextResponse.json(
-        { error: "识图功能仅对 Pro 开放。" },
-        { status: 403 },
+        {
+          error: t(
+            "Vision is available for Pro only.",
+            "识图功能仅对 Pro 开放。",
+          ),
+        },
+        { status: 403, headers: SECURITY_HEADERS },
       );
     }
 
     if (status.remaining !== null && status.remaining <= 0) {
       return NextResponse.json(
-        { error: "今日配额已用完。", quota: status },
-        { status: 429 },
+        { error: t("Daily quota reached.", "今日配额已用完。"), quota: status },
+        { status: 429, headers: SECURITY_HEADERS },
       );
     }
 
@@ -94,8 +129,11 @@ export async function POST(request: Request) {
 
     if (!allowed) {
       return NextResponse.json(
-        { error: "今日配额已用完。", quota: updatedStatus },
-        { status: 429 },
+        {
+          error: t("Daily quota reached.", "今日配额已用完。"),
+          quota: updatedStatus,
+        },
+        { status: 429, headers: SECURITY_HEADERS },
       );
     }
 
@@ -103,9 +141,10 @@ export async function POST(request: Request) {
       ? process.env.OPENAI_VISION_MODEL || "gpt-4o-mini"
       : process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini";
 
+    const languageLabel = lang === "zh" ? "Chinese" : "English";
     const userPrompt = imageFile
-      ? `Mode: ${mode}. User text: ${text || "N/A"}. Analyze the image and respond.`
-      : `Mode: ${mode}. User text: ${text}`;
+      ? `Language: ${languageLabel}. Mode: ${mode}. User text: ${text || "N/A"}. Analyze the image and respond.`
+      : `Language: ${languageLabel}. Mode: ${mode}. User text: ${text}`;
 
     const systemMessage: ChatCompletionMessageParam = {
       role: "system",
@@ -120,9 +159,9 @@ export async function POST(request: Request) {
             {
               type: "image_url",
               image_url: {
-                url: `data:${imageFile.type};base64,${arrayBufferToBase64(
+                url: `data:${imageFile.type};base64,${Buffer.from(
                   await imageFile.arrayBuffer(),
-                )}`,
+                ).toString("base64")}`,
               },
             },
           ],
@@ -143,17 +182,20 @@ export async function POST(request: Request) {
     const raw = completion.choices?.[0]?.message?.content?.trim() || "";
     const parsed = safeJsonParse(raw);
 
-    if (!parsed) {
+    if (!parsed || !isValidGenerateResponse(parsed)) {
       return NextResponse.json(
-        { error: "模型返回格式异常，请重试。" },
-        { status: 500 },
+        {
+          error: t(
+            "Model returned invalid format. Please try again.",
+            "模型返回格式异常，请重试。",
+          ),
+        },
+        { status: 500, headers: SECURITY_HEADERS },
       );
     }
 
-    const affiliateCategory =
-      typeof parsed.affiliate_category === "string" && parsed.affiliate_category
-        ? parsed.affiliate_category
-        : null;
+    const data = parsed as GenerateResponse;
+    const affiliateCategory = data.affiliate_category;
 
     const affiliate =
       updatedStatus.isPro &&
@@ -162,18 +204,25 @@ export async function POST(request: Request) {
         ? AFFILIATE_MAP[affiliateCategory]
         : null;
 
-    return NextResponse.json({
-      caption: parsed.caption ?? "",
-      hashtags: parsed.hashtags ?? "",
-      detected_object: parsed.detected_object ?? null,
-      affiliate_category: affiliateCategory,
-      affiliate,
-      quota: updatedStatus,
-    });
-  } catch {
     return NextResponse.json(
-      { error: "服务异常，请稍后再试。" },
-      { status: 500 },
+      {
+        caption: data.caption ?? "",
+        hashtags: data.hashtags ?? "",
+        detected_object: data.detected_object ?? null,
+        affiliate_category: affiliateCategory,
+        affiliate,
+        quota: updatedStatus,
+      },
+      { headers: SECURITY_HEADERS },
+    );
+  } catch (error) {
+    console.error(
+      "[Generate API Error]",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    return NextResponse.json(
+      { error: "Service error. Please try again later." },
+      { status: 500, headers: SECURITY_HEADERS },
     );
   }
 }

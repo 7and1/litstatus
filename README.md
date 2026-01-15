@@ -20,8 +20,8 @@ npm run dev
 
 - Guest: IP-based (Upstash Redis, 24h TTL)
 - Guest (alt): `REDIS_URL` to local Redis if Upstash not used
-- User: `profiles.daily_usage_count` reset daily
-- Pro: unlimited + Vision + affiliate
+- User: `profiles.daily_usage_count` reset daily (20/day)
+- Pro: unlimited + Vision + affiliate (wish list)
 
 ## API
 
@@ -31,6 +31,15 @@ npm run dev
   - `mode` (Standard | Savage | Rizz)
 - `GET /api/quota`
 - `POST /api/wishlist`
+- `POST /api/feedback`
+- `GET /api/admin/wishlist/export?token=...`
+
+## Analytics
+
+Set one or both:
+
+- `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (+ optional `NEXT_PUBLIC_PLAUSIBLE_SRC`)
+- `NEXT_PUBLIC_GA_ID`
 
 ## Docker (Prod)
 
