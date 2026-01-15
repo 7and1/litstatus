@@ -1,5 +1,5 @@
 import { createSupabaseAdmin } from "./supabaseAdmin";
-import type { User } from "@supabase/supabase-js";
+import type { User } from "@supabase/ssr";
 
 export async function getUserFromRequest(
   request: Request,

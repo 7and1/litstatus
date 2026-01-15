@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Expose environment variables to Edge Runtime
-  experimental: {
-    serverComponentsExternalPackages: ["@supabase/supabase-js"],
-  },
-  // Runtime environment variables for Edge
   env: {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,

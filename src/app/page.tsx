@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/ssr";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { MODES, type Mode, type QuotaStatus } from "@/lib/constants";
 
