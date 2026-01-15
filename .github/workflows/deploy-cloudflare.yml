@@ -54,7 +54,6 @@ jobs:
           directory: .vercel/output/static # Output from next-on-pages
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           wranglerVersion: "3"
-          createProject: true
 
       - name: Deployment summary
         run: |
