@@ -1,0 +1,27 @@
+services:
+  litstatus-web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: litstatus-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3023:3000"
+    networks:
+      - proxy-tier
+      - supabase-tier
+
+networks:
+  proxy-tier:
+    external: true
+    name: nginx-proxy_default
+  supabase-tier:
+    external: true
+    name: supabase_default
