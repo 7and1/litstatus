@@ -1,6 +1,6 @@
 import { Redis } from "@upstash/redis";
 import { createClient } from "redis";
-import type { User } from "@supabase/ssr";
+import type { User } from "./auth";
 import { createSupabaseAdmin } from "./supabaseAdmin";
 import { QUOTAS, type Plan, type QuotaStatus } from "./constants";
 

@@ -1,5 +1,10 @@
 import { createSupabaseAdmin } from "./supabaseAdmin";
-import type { User } from "@supabase/ssr";
+
+// Local User type for Edge Runtime compatibility
+export type User = {
+  id: string;
+  email?: string;
+};
 
 export async function getUserFromRequest(
   request: Request,
@@ -14,5 +19,5 @@ export async function getUserFromRequest(
   const { data, error } = await supabase.auth.getUser(token);
 
   if (error || !data.user) return null;
-  return data.user;
+  return data.user as unknown as User;
 }
