@@ -4,6 +4,7 @@
 # - CLOUDFLARE_ACCOUNT_ID: Cloudflare Account ID
 # - SUPABASE_URL: Supabase project URL
 # - SUPABASE_ANON_KEY: Supabase anonymous key
+# - OPENAI_API_KEY: OpenAI API key
 
 name: Deploy to Cloudflare Pages
 
@@ -36,11 +37,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Next.js app
+      - name: Build Next.js for Cloudflare Pages
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: npm run build
+        run: |
+          # Install @cloudflare/next-on-pages adapter
+          npx @cloudflare/next-on-pages
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -48,9 +51,10 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: litstatus
-          directory: .next
+          directory: .vercel/output/static # Output from next-on-pages
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           wranglerVersion: "3"
+          createProject: true
 
       - name: Deployment summary
         run: |
