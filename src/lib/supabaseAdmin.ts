@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
 export function createSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,10 +10,16 @@ export function createSupabaseAdmin() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  return createClient(url, key, {
+  return createServerClient(url, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+    },
+    global: {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
     },
   });
 }
