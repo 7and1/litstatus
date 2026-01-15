@@ -2,9 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Session } from "@supabase/ssr";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { MODES, type Mode, type QuotaStatus } from "@/lib/constants";
+
+// Local Session type for browser client compatibility
+type Session = {
+  access_token: string;
+  user: {
+    id: string;
+    email: string | null;
+  };
+};
 
 type GenerateResult = {
   caption: string;
