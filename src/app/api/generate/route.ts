@@ -8,7 +8,17 @@ import { getOpenAIClient } from "@/lib/openai";
 import { SYSTEM_PROMPT } from "@/lib/prompts";
 import { consumeQuota, getQuotaStatus } from "@/lib/quota";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
+
+// Edge-compatible base64 encoding
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
 
 const MODE_SET = new Set(MODES.map((mode) => mode.toLowerCase()));
 
@@ -110,9 +120,9 @@ export async function POST(request: Request) {
             {
               type: "image_url",
               image_url: {
-                url: `data:${imageFile.type};base64,${Buffer.from(
+                url: `data:${imageFile.type};base64,${arrayBufferToBase64(
                   await imageFile.arrayBuffer(),
-                ).toString("base64")}`,
+                )}`,
               },
             },
           ],

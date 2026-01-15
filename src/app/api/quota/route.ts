@@ -3,7 +3,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { getClientIp } from "@/lib/ip";
 import { getQuotaStatus } from "@/lib/quota";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function GET(request: Request) {
   try {
