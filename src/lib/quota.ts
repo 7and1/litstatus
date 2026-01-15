@@ -1,22 +1,8 @@
-import { Redis } from "@upstash/redis";
-import { createClient } from "redis";
 import type { User } from "./auth";
 import { createSupabaseAdmin } from "./supabaseAdmin";
 import { QUOTAS, type Plan, type QuotaStatus } from "./constants";
 
-const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
-const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-const redisUrl = process.env.REDIS_URL;
-
-const upstash =
-  upstashUrl && upstashToken
-    ? new Redis({ url: upstashUrl, token: upstashToken })
-    : null;
-type NodeRedisClient = ReturnType<typeof createClient>;
-
-const nodeRedis = redisUrl ? createClient({ url: redisUrl }) : null;
-let nodeRedisReady: Promise<NodeRedisClient | null> | null = null;
-
+// Edge Runtime compatible in-memory quota store
 const fallbackStore = new Map<string, { count: number; expiresAt: number }>();
 
 function dateKey(date = new Date()) {
@@ -44,52 +30,13 @@ function incrementFallback(key: string) {
   return entry.count;
 }
 
-async function getNodeRedis() {
-  if (!nodeRedis) return null;
-  if (!nodeRedisReady) {
-    nodeRedisReady = nodeRedis.connect().then(
-      () => nodeRedis,
-      () => {
-        nodeRedisReady = null;
-        return null;
-      },
-    );
-  }
-  return nodeRedisReady;
-}
-
 async function getGuestCount(ip: string) {
   const key = `quota:guest:${ip}`;
-  const client = await getNodeRedis();
-  if (client) {
-    const raw = await client.get(key);
-    const count = raw ? Number(raw) : 0;
-    return Number.isNaN(count) ? 0 : count;
-  }
-  if (upstash) {
-    const count = await upstash.get<number>(key);
-    return count ?? 0;
-  }
   return getFallback(key);
 }
 
 async function incrementGuestCount(ip: string) {
   const key = `quota:guest:${ip}`;
-  const client = await getNodeRedis();
-  if (client) {
-    const count = await client.incr(key);
-    if (count === 1) {
-      await client.expire(key, 60 * 60 * 24);
-    }
-    return count;
-  }
-  if (upstash) {
-    const count = await upstash.incr(key);
-    if (count === 1) {
-      await upstash.expire(key, 60 * 60 * 24);
-    }
-    return count;
-  }
   return incrementFallback(key);
 }
 
@@ -117,7 +64,7 @@ async function getOrCreateProfile(user: User): Promise<Profile> {
     .from("profiles")
     .insert({
       id: user.id,
-      email: user.email,
+      email: user.email ?? null,
       is_pro: false,
       daily_usage_count: 0,
       last_reset_time: new Date().toISOString(),
