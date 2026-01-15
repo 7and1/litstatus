@@ -10,24 +10,14 @@ export function createSupabaseAdmin() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  return createServerClient(
-    url,
-    {
-      // Empty cookies for admin client (Edge Runtime compatible)
+  return createServerClient(url, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    cookies: {
       getAll: () => [],
       setAll: () => {},
     },
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-        },
-      },
-    },
-  );
+  });
 }
