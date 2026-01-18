@@ -1,0 +1,155 @@
+# CD Pipeline for litstatus.com VPS Deployment
+# Deploys to VPS on push to main branch
+
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: Skip tests
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+env:
+  NODE_VERSION: "20"
+  VPS_HOST: "root@107.174.42.198"
+  VPS_PATH: "/opt/docker-projects/standalone-apps/litstatus"
+
+permissions:
+  contents: read
+
+jobs:
+  # Pre-deployment checks
+  pre-deploy:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for secrets
+        run: |
+          if git ls-files | grep -q "\.env"; then
+            echo "::error::.env files found in git! Aborting."
+            exit 1
+          fi
+
+      - name: Set deployment flag
+        id: check
+        run: echo "should_deploy=true" >> $GITHUB_OUTPUT
+
+  # Build and deploy
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: needs.pre-deploy.outputs.should_deploy == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          npm run lint
+          npm run type-check
+          npm run build
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 107.174.42.198 >> ~/.ssh/known_hosts
+
+      - name: Create backup on VPS
+        run: |
+          ssh ${{ env.VPS_HOST }} "
+            BACKUP_DIR=/tmp/litstatus-backups
+            BACKUP_TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+            mkdir -p \$BACKUP_DIR/\$BACKUP_TIMESTAMP
+            cp -r ${{ env.VPS_PATH }}/* \$BACKUP_DIR/\$BACKUP_TIMESTAMP/ 2>/dev/null || true
+            cp ${{ env.VPS_PATH }}/.env \$BACKUP_DIR/\$BACKUP_TIMESTAMP/.env.backup 2>/dev/null || true
+            echo \"Backup created: \$BACKUP_DIR/\$BACKUP_TIMESTAMP\"
+          "
+
+      - name: Sync code to VPS
+        run: |
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude '.next' \
+            --exclude '__tests__' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude '*.md' \
+            --exclude '.github' \
+            --exclude 'docs/' \
+            --exclude 'coverage' \
+            --exclude '.nyc_output' \
+            ./ ${{ env.VPS_HOST }}:${{ env.VPS_PATH }}/
+
+      - name: Build and restart on VPS
+        run: |
+          ssh ${{ env.VPS_HOST }} "
+            cd ${{ env.VPS_PATH }}
+            docker-compose build --no-cache
+            docker-compose up -d
+            docker ps | grep litstatus-web
+          "
+
+      - name: Verify deployment
+        run: |
+          MAX_ATTEMPTS=24
+          ATTEMPT=0
+          while [ \$ATTEMPT -lt \$MAX_ATTEMPTS ]; do
+            if curl -f -s https://litstatus.com/api/health > /dev/null; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            ATTEMPT=\$((ATTEMPT + 1))
+            echo "Attempt \$ATTEMPT failed, waiting 5s..."
+            sleep 5
+          done
+          echo "Health check failed after \$MAX_ATTEMPTS attempts"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed. Manual rollback may be required."
+          echo "Connect to VPS and check: ssh ${{ env.VPS_HOST }}"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_rsa
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "## VPS Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Success" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://litstatus.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health**: https://litstatus.com/api/health" >> $GITHUB_STEP_SUMMARY

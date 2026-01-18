@@ -6,7 +6,24 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "type-check": "tsc --noEmit",
+    "analyze": "ANALYZE=true next build",
+    "build:production": "npm run lint && npm run type-check && next build",
+    "build:cloudflare": "npx @cloudflare/next-on-pages",
+    "dev:cloudflare": "npx wrangler pages dev .vercel/output/static",
+    "deploy:cloudflare": "npm run build:cloudflare && npx wrangler pages deploy .vercel/output/static",
+    "test": "vitest",
+    "test:unit": "vitest run --coverage src/__tests__/unit",
+    "test:integration": "vitest run --coverage src/__tests__/integration",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:security": "vitest run --coverage src/__tests__/security",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:security",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@supabase/ssr": "0.8.0",
@@ -16,16 +33,27 @@
     "openai": "6.16.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "redis": "5.10.0"
+    "redis": "5.10.0",
+    "web-vitals": "^3.5.2",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@next/bundle-analyzer": "^16.1.2",
+    "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.2",
+    "jsdom": "^25.0.1",
+    "msw": "^2.7.0",
+    "nock": "^13.5.6",
+    "strip-ansi": "^7.1.0",
+    "supertest": "^7.0.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.8"
   }
 }

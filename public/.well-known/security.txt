@@ -1,0 +1,8 @@
+Contact: mailto:security@litstatus.com
+Expires: 2026-12-31T23:59:59.000Z
+Encryption: https://litstatus.com/pgp-key.txt
+Acknowledgments: https://litstatus.com/security/hall-of-fame
+Preferred-Languages: en, zh
+Canonical: https://litstatus.com/.well-known/security.txt
+Policy: https://litstatus.com/security-policy
+# For security issues, please email security@litstatus.com

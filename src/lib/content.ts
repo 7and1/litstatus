@@ -46,13 +46,13 @@ export type Community = {
 };
 
 export const HERO_BULLETS: Localized[] = [
-  { en: "Single-call JSON output", zh: "一次请求输出 JSON" },
+  { en: "One-call JSON output", zh: "单次请求返回 JSON" },
   {
-    en: "3 tones: Standard / Savage / Rizz",
+    en: "3 tone modes: Standard / Savage / Rizz",
     zh: "3 种语气：Standard / Savage / Rizz",
   },
-  { en: "Vision upload for Pro", zh: "Pro 支持识图上传" },
-  { en: "English + Chinese supported", zh: "支持中英双语" },
+  { en: "Image input for Pro (Vision)", zh: "Pro 支持识图输入" },
+  { en: "English + Chinese", zh: "英文 + 中文" },
 ];
 
 export const HERO_VARIANTS: Record<
@@ -61,97 +61,97 @@ export const HERO_VARIANTS: Record<
 > = {
   A: {
     title: {
-      en: "Turn any moment into a lit caption.",
-      zh: "把每个瞬间变成爆款文案。",
+      en: "Turn moments into captions that hit.",
+      zh: "将每个瞬间转化为爆款文案。",
     },
     subtitle: {
-      en: "Generate viral captions and hashtags in seconds. Pick your tone, drop your vibe, post-ready output.",
-      zh: "秒出高传播文案与标签。选语气、给场景、一键生成，直接发布。",
+      en: "Generate captions + hashtags in seconds. Pick a tone, get post-ready copy.",
+      zh: "秒级生成文案与标签。选择语气，即刻发布。",
     },
   },
   B: {
     title: {
-      en: "Captions that hit. Every single time.",
-      zh: "文案一出，直接炸场。",
+      en: "Captions that hit. Every time.",
+      zh: "文案秒出，每次炸场。",
     },
     subtitle: {
-      en: "AI-powered caption generator for creators. 3 tones, instant output, copy and go.",
-      zh: "为创作者打造的 AI 文案生成器。3 种语气，极速输出，复制即走。",
+      en: "AI captions for creators. Three tones, instant output, copy and post.",
+      zh: "专为创作者打造的 AI 文案工具。三种语气，即时输出，复制即用。",
     },
   },
 };
 
 export const HERO_CTA = {
-  primary: { en: "Generate caption", zh: "生成文案" },
-  secondary: { en: "See examples", zh: "查看示例" },
+  primary: { en: "Generate caption", zh: "立即生成" },
+  secondary: { en: "View examples", zh: "查看示例" },
 };
 
 export const STATS: Stat[] = [
   {
     value: { en: "3", zh: "3" },
-    label: { en: "Free daily tries", zh: "免费每日次数" },
+    label: { en: "Free daily generations", zh: "每日免费生成次数" },
   },
   {
     value: { en: "20+", zh: "20+" },
-    label: { en: "Logged-in quota", zh: "登录用户配额" },
+    label: { en: "Free with sign-up", zh: "注册即可享" },
   },
   {
     value: { en: "Unlimited", zh: "无限" },
-    label: { en: "Pro generations", zh: "Pro 生成次数" },
+    label: { en: "Pro generations", zh: "Pro 版本专属" },
   },
   {
     value: { en: "2", zh: "2" },
-    label: { en: "Languages supported", zh: "支持语言" },
+    label: { en: "Languages supported", zh: "支持语言数量" },
   },
 ];
 
 export const FEATURES: Feature[] = [
   {
     icon: "⚡",
-    title: { en: "Instant generation", zh: "极速生成" },
+    title: { en: "Instant generation", zh: "即时生成" },
     description: {
-      en: "One request returns caption, hashtags, and detected object in structured JSON.",
-      zh: "单次请求返回文案、标签和识别物体，结构化 JSON 输出。",
+      en: "One API call returns caption, hashtags, and detected object in structured JSON.",
+      zh: "单次调用即可获取文案、标签与识别物体，结构化 JSON 输出。",
     },
   },
   {
     icon: "🎯",
-    title: { en: "Tone control", zh: "语气控制" },
+    title: { en: "Tone control", zh: "语气精准控制" },
     description: {
-      en: "Standard for clean, Savage for bold, Rizz for charming. Consistent style every time.",
-      zh: "Standard 简洁、Savage 犀利、Rizz 魅惑。每次风格稳定一致。",
+      en: "Standard for clean, Savage for bold, Rizz for charming. Get consistent style, every time.",
+      zh: "Standard 简洁通用、Savage 大胆有力、Rizz 魅力自然。每次输出风格一致。",
     },
   },
   {
     icon: "👁️",
-    title: { en: "Vision upload", zh: "识图上传" },
+    title: { en: "Vision upload", zh: "识图功能" },
     description: {
-      en: "Upload any photo and let AI detect objects for contextual captions (Pro).",
-      zh: "上传任意照片，AI 识别物体自动生成场景化文案（Pro 功能）。",
+      en: "Upload any photo and let AI detect objects for contextual captions (Pro feature).",
+      zh: "上传照片即可自动识别物体，生成更贴合场景的文案（Pro 功能）。",
     },
   },
   {
     icon: "🔗",
-    title: { en: "Smart affiliates", zh: "智能推荐" },
+    title: { en: "Smart affiliates", zh: "智能产品推荐" },
     description: {
-      en: "Auto-match relevant product recommendations based on detected objects.",
-      zh: "根据识别物体自动匹配相关产品推荐。",
+      en: "Automatically match relevant product recommendations based on detected objects.",
+      zh: "根据识别到的物体自动匹配相关产品推荐。",
     },
   },
   {
     icon: "🌐",
-    title: { en: "Bilingual ready", zh: "双语支持" },
+    title: { en: "Bilingual support", zh: "双语支持" },
     description: {
-      en: "Full English and Chinese support. Output matches your input language.",
-      zh: "完整支持英文和中文。输出语言自动匹配输入。",
+      en: "Full English and Chinese support. Output language automatically matches your input.",
+      zh: "完整支持中英双语，输出语言自动匹配您的输入。",
     },
   },
   {
     icon: "🔒",
     title: { en: "Privacy first", zh: "隐私优先" },
     description: {
-      en: "Your inputs are never stored. Generation happens per request, then data is gone.",
-      zh: "绝不存储输入内容。每次请求独立生成，数据即用即弃。",
+      en: "Your inputs are processed per request and are never stored on our servers.",
+      zh: "您的内容按次处理，我们绝不会存储任何输入数据。",
     },
   },
 ];
@@ -160,42 +160,42 @@ export const TIERS: Tier[] = [
   {
     name: { en: "Guest", zh: "访客" },
     description: {
-      en: "Try it free—no sign-up required. Perfect for testing the waters.",
-      zh: "免费试用，无需注册。适合体验产品能力。",
+      en: "Try it free with no sign-up required. Perfect for quick tests.",
+      zh: "无需注册即可免费试用，适合快速体验。",
     },
     features: [
-      { en: "3 generations per day", zh: "每日 3 次生成" },
-      { en: "Standard mode only", zh: "仅 Standard 模式" },
+      { en: "3 generations per day", zh: "每日 3 次生成机会" },
+      { en: "Standard mode only", zh: "仅限 Standard 模式" },
       { en: "Text input supported", zh: "支持文字输入" },
-      { en: "Ad-supported experience", zh: "含广告展示" },
+      { en: "Ad-supported experience", zh: "包含广告展示" },
     ],
   },
   {
     name: { en: "User", zh: "用户" },
     badge: { en: "Free account", zh: "免费账户" },
     description: {
-      en: "For casual creators who post daily. More quota to keep your flow going.",
-      zh: "适合日常发布的创作者。更高配额保持创作流畅。",
+      en: "For daily creators who need more quota and full tone access.",
+      zh: "适合日常创作者，提供更多配额并解锁全部语气模式。",
     },
     features: [
-      { en: "20 generations per day", zh: "每日 20 次生成" },
-      { en: "All 3 tone modes", zh: "全部 3 种语气模式" },
-      { en: "Local history (last 50)", zh: "本地历史（最近 50 条）" },
-      { en: "No banner ads", zh: "无 Banner 广告" },
+      { en: "20 generations per day", zh: "每日 20 次生成机会" },
+      { en: "All 3 tone modes", zh: "解锁全部 3 种语气模式" },
+      { en: "Local history (last 50)", zh: "本地历史记录（最近 50 条）" },
+      { en: "No banner ads", zh: "无 Banner 广告干扰" },
     ],
   },
   {
     name: { en: "Pro", zh: "Pro" },
     badge: { en: "Coming soon", zh: "即将推出" },
     description: {
-      en: "Unlimited everything. Vision upload, affiliate cards, priority support.",
-      zh: "无限次数。识图上传、推荐卡片、优先支持。",
+      en: "Unlimited generations, vision upload, affiliate cards, and priority support.",
+      zh: "无限生成次数、识图上传、智能推荐卡片及优先支持。",
     },
     features: [
-      { en: "Unlimited generations", zh: "无限生成" },
-      { en: "Vision image upload", zh: "图片识别上传" },
-      { en: "Smart affiliate cards", zh: "智能推荐卡片" },
-      { en: "Priority AI processing", zh: "AI 优先处理" },
+      { en: "Unlimited generations", zh: "无限生成次数" },
+      { en: "Vision image upload", zh: "图片识别与上传" },
+      { en: "Smart affiliate cards", zh: "智能产品推荐卡片" },
+      { en: "Priority AI processing", zh: "AI 优先处理队列" },
       { en: "Early access to new features", zh: "新功能抢先体验" },
     ],
   },
@@ -211,7 +211,7 @@ export const EXAMPLES: Example[] = [
     mode: "Savage",
     caption: {
       en: "Years of waiting. Worth every L. 👟🔥",
-      zh: "等了好几年。每场抢购都值了。👟🔥",
+      zh: "等了好几年。每一个 L 都值了。👟🔥",
     },
     hashtags: "#AJ1 #Sneakerhead #CopOrDrop #Kicks",
     detected: { en: "Nike Air Jordan 1", zh: "Nike Air Jordan 1" },
@@ -247,7 +247,7 @@ export const EXAMPLES: Example[] = [
     mode: "Savage",
     caption: {
       en: "Days when legs don't work are the days that count. 💪",
-      zh: "腿走不动路的日子，才是算数的日子。💪",
+      zh: "腿走不动的日子，才算数。💪",
     },
     hashtags: "#LegDay #GymMotivation #NoPainNoGain #Grind",
     detected: { en: "Gym equipment", zh: "健身器材" },
@@ -265,7 +265,7 @@ export const EXAMPLES: Example[] = [
     mode: "Rizz",
     caption: {
       en: "Caffeine with a side of calm. ☕💫",
-      zh: "咖啡配上平静。☕💫",
+      zh: "咖啡加点平静。☕💫",
     },
     hashtags: "#SundayVibes #CoffeeTime #SlowLiving #Cozy",
     detected: { en: "Coffee cup with latte art", zh: "拿铁咖啡" },
@@ -283,11 +283,11 @@ export const EXAMPLES: Example[] = [
     mode: "Standard",
     caption: {
       en: "New machine, same mission. 🖥️",
-      zh: "新设备，同样的使命。🖥️",
+      zh: "新机器，同样的使命。🖥️",
     },
     hashtags: "#DeskSetup #MacBookPro #TechLife #Workstation",
     detected: { en: "MacBook Pro", zh: "MacBook Pro" },
-    affiliate: { en: "Suggested: Laptop sleeve", zh: "推荐:笔记本电脑内胆包" },
+    affiliate: { en: "Suggested: Laptop sleeve", zh: "推荐：笔记本电脑内胆包" },
   },
   {
     title: { en: "Pet being cute", zh: "宠物卖萌" },
@@ -298,7 +298,7 @@ export const EXAMPLES: Example[] = [
     mode: "Standard",
     caption: {
       en: "Judged by the fuzz. 24/7. 🐱",
-      zh: "被毛孩子审判。全天候。🐱",
+      zh: "被毛孩子审判，全天候。🐱",
     },
     hashtags: "#CatLife #PetParent #CuteCat #CatLover",
     detected: { en: "Cat", zh: "猫咪" },
@@ -313,7 +313,7 @@ export const EXAMPLES: Example[] = [
     mode: "Rizz",
     caption: {
       en: "Dressed like I'm the main character. 🌙",
-      zh: "穿得像主角一样出场。🌙",
+      zh: "像主角一样出场。🌙",
     },
     hashtags: "#OOTD #NightOut #FitCheck #Rizz",
     detected: { en: "Fashion outfit", zh: "时尚穿搭" },
@@ -328,7 +328,7 @@ export const EXAMPLES: Example[] = [
     mode: "Savage",
     caption: {
       en: "From scratch. Because store-bought is for amateurs. 🍝",
-      zh: "从零开始。因为买现成的都是业余选手。🍝",
+      zh: "从零开始。现成的留给业余。🍝",
     },
     hashtags: "#Homemade #Pasta #Foodie #ChefLife",
     detected: { en: "Fresh pasta dish", zh: "新鲜意面" },
@@ -343,13 +343,49 @@ export const EXAMPLES: Example[] = [
     mode: "Savage",
     caption: {
       en: "Front row. Ears ringing. Zero regrets. 🎸",
-      zh: "前排。耳朵嗡嗡响。零后悔。🎸",
+      zh: "前排，耳鸣。零后悔。🎸",
     },
     hashtags: "#Concert #LiveMusic #FrontRow #Vibes",
     detected: { en: "Concert stage", zh: "演唱会舞台" },
     affiliate: {
       en: "Suggested: Concert photography guide",
       zh: "推荐：演唱会摄影指南",
+    },
+  },
+  {
+    title: { en: "Morning routine", zh: "晨间日常" },
+    input: {
+      en: "Started my 5 AM morning routine. Need something inspiring for Standard mode.",
+      zh: "开始了 5 点晨间例程。来点励志的 Standard 文案。",
+    },
+    mode: "Standard",
+    caption: {
+      en: "5 AM club. Building dreams before the world wakes up. 🌅",
+      zh: "5 点俱乐部。在世界醒来之前构建梦想。🌅",
+    },
+    hashtags: "#MorningRoutine #5AMClub #Productivity #Motivation",
+    detected: { en: "Morning setup", zh: "晨间布置" },
+    affiliate: {
+      en: "Suggested: Daily planner journal",
+      zh: "推荐：日程规划手账",
+    },
+  },
+  {
+    title: { en: "Book recommendation", zh: "好书推荐" },
+    input: {
+      en: "Just finished an amazing book. Want to share it in Rizz mode.",
+      zh: "刚读完一本好书。用 Rizz 模式分享一下。",
+    },
+    mode: "Rizz",
+    caption: {
+      en: "This book just changed my entire perspective. Mind = blown. 📚✨",
+      zh: "这本书彻底改变了我的视角。大脑爆炸。📚✨",
+    },
+    hashtags: "#BookRecommendation #Reading #MustRead #BookCommunity",
+    detected: { en: "Book", zh: "书籍" },
+    affiliate: {
+      en: "Suggested: Reading tracking app",
+      zh: "推荐：阅读记录应用",
     },
   },
 ];
@@ -366,15 +402,15 @@ export const FAQS: FAQ[] = [
       zh: "LitStatus 会保存我的内容吗？",
     },
     answer: {
-      en: "No. Your text and images are used only for generation and are never stored on our servers. Each request is processed independently.",
-      zh: "不会。你的文字和图片仅用于生成，绝不会存储在我们的服务器上。每次请求独立处理。",
+      en: "No. Your inputs are processed per request and are never stored on our servers. We don't save your text or images.",
+      zh: "不会。您的内容按次处理，我们绝不会存储在服务器上，也不会保存文字或图片。",
     },
   },
   {
     question: { en: "How do daily quotas work?", zh: "每日配额如何计算？" },
     answer: {
-      en: "Guests get 3 free generations per day. Logged-in users get 20 per day. Quotas reset at midnight UTC. Pro users have unlimited generations.",
-      zh: "访客每日 3 次免费生成。登录用户每日 20 次。配额于 UTC 午夜重置。Pro 用户无限次数。",
+      en: "Guests receive 3 generations per day. Logged-in users get 20 per day. Quotas reset at 00:00 UTC. Pro members enjoy unlimited generations.",
+      zh: "访客每日可获得 3 次生成机会，登录用户每日 20 次，配额于 UTC 00:00 重置。Pro 会员享受无限生成。",
     },
   },
   {
@@ -383,8 +419,8 @@ export const FAQS: FAQ[] = [
       zh: "3 种语气模式有什么区别？",
     },
     answer: {
-      en: "Standard is clean and versatile for any post. Savage is bold, confident, and energetic—great for fitness, achievements, or flexes. Rizz is charming, smooth, and slightly flirty—perfect for selfies and lifestyle content.",
-      zh: "Standard 简洁通用，适合任何发布场景。Savage 大胆自信充满能量，适合健身、成就展示。Rizz 魅惑流畅略带调情，适合自拍和生活方式内容。",
+      en: "Standard is clean and versatile for any content. Savage is bold and high-energy for impactful posts. Rizz is charming and playful—ideal for selfies and lifestyle content.",
+      zh: "Standard 简洁通用，适合任何内容；Savage 大胆高能，适合冲击力强的文案；Rizz 轻松迷人，非常适合自拍和生活方式类内容。",
     },
   },
   {
@@ -393,8 +429,8 @@ export const FAQS: FAQ[] = [
       zh: "Pro 功能什么时候上线？",
     },
     answer: {
-      en: "Pro is in development and will include unlimited generations, vision upload (analyze photos), and smart affiliate cards. Join the wish list to be notified first.",
-      zh: "Pro 正在开发中，将包含无限生成、识图上传（分析照片）和智能推荐卡片。加入预约名单第一时间获取通知。",
+      en: "Pro is currently in development and will include unlimited generations, vision upload, smart affiliate cards, and priority support. Join the waitlist to be notified first.",
+      zh: "Pro 版本正在开发中，将包含无限生成、识图上传、智能推荐卡片及优先支持功能。加入等待名单可第一时间收到通知。",
     },
   },
   {
@@ -403,8 +439,8 @@ export const FAQS: FAQ[] = [
       zh: "LitStatus 支持哪些语言？",
     },
     answer: {
-      en: "Currently English and Chinese are fully supported. The AI detects your input language and generates captions in the same language. More languages coming soon.",
-      zh: "目前完整支持英文和中文。AI 会检测你的输入语言并用同种语言生成文案。更多语言即将推出。",
+      en: "We currently support English and Chinese. The output language automatically matches your input language. More languages are planned for future releases.",
+      zh: "目前我们支持英文和中文，输出语言会自动匹配您的输入语言。更多语言正在规划中。",
     },
   },
   {
@@ -413,52 +449,52 @@ export const FAQS: FAQ[] = [
       zh: "生成的文案可以用于商业用途吗？",
     },
     answer: {
-      en: "Yes! All generated captions are yours to use however you like—personal posts, brand content, client work, no restrictions.",
-      zh: "可以！所有生成的文案完全归你所有，可用于个人发布、品牌内容、客户工作，无任何限制。",
+      en: "Yes, absolutely. Generated captions belong to you and can be used for personal posts, brand content, or client work without restrictions.",
+      zh: "完全可以。生成的文案归您所有，可用于个人发布、品牌内容或客户项目，没有任何限制。",
     },
   },
   {
     question: {
       en: "How accurate is the object detection?",
-      zh: "物体识别有多准确？",
+      zh: "物体识别的准确度如何？",
     },
     answer: {
-      en: "Vision detection uses advanced AI to identify common objects in photos (sneakers, electronics, food, pets, etc.). It works well for clear, well-lit images. Pro users get the most accurate results.",
-      zh: "视觉识别使用先进 AI 识别照片中的常见物体（球鞋、电子产品、食物、宠物等）。对于光线充足、清晰的照片效果最好。Pro 用户获得最准确结果。",
+      en: "Vision detection works well for common objects when photos are clear and well-lit. Pro users get the most accurate results with our enhanced detection model.",
+      zh: "在照片清晰、光线充足的情况下，识图功能对常见物体的识别效果很好。Pro 用户可使用增强识别模型，获得最准确的结果。",
     },
   },
   {
     question: {
       en: "How do affiliate recommendations work?",
-      zh: "推荐功能是如何工作的？",
+      zh: "推荐功能是如何运作的？",
     },
     answer: {
-      en: "When an object is detected in your photo or text, we match it with relevant product recommendations. These are curated suggestions to help you discover useful products. Pro users see full affiliate cards.",
-      zh: "当在照片或文字中检测到物体时，我们会匹配相关产品推荐。这些是精心策划的建议，帮助你发现实用产品。Pro 用户可以看到完整的推荐卡片。",
+      en: "When an object is detected in your image, we match it to curated product categories. Pro users see full affiliate cards with direct purchase links.",
+      zh: "当在图片中识别到物体时，我们会将其匹配到精选的产品类别。Pro 用户可看到完整的推荐卡片及直接购买链接。",
     },
   },
 ];
 
 export const STEPS: Step[] = [
   {
-    title: { en: "Describe your moment", zh: "描述你的场景" },
+    title: { en: "Describe your moment", zh: "描述您的场景" },
     description: {
-      en: "Type what's happening or upload a photo (Pro).",
-      zh: "输入场景描述或上传照片（Pro）。",
+      en: "Enter what's happening or upload a photo (Pro feature).",
+      zh: "输入场景描述或上传照片（Pro 功能）。",
     },
   },
   {
     title: { en: "Pick your tone", zh: "选择语气" },
     description: {
-      en: "Standard for clean, Savage for bold, Rizz for charming.",
-      zh: "Standard 简洁、Savage 犀利、Rizz 魅惑。",
+      en: "Choose from Standard, Savage, or Rizz mode.",
+      zh: "从 Standard、Savage 或 Rizz 模式中选择。",
     },
   },
   {
-    title: { en: "Copy and post", zh: "复制发布" },
+    title: { en: "Copy and post", zh: "复制并发布" },
     description: {
-      en: "Get your caption with hashtags instantly. Ready to go.",
-      zh: "瞬间获得带标签的文案。直接可用。",
+      en: "Get your caption + hashtags instantly. Copy and post to your favorite platform.",
+      zh: "即时获取文案与标签。复制后发布到您喜爱的平台。",
     },
   },
 ];
@@ -467,29 +503,29 @@ export const COMMUNITY: Community[] = [
   {
     title: { en: "Content creators", zh: "内容创作者" },
     description: {
-      en: "Daily posters who need fresh captions fast",
-      zh: "日更达人，快速获得新鲜文案",
+      en: "Daily posters who need fresh, engaging captions fast",
+      zh: "需要快速获取新鲜、吸引人文案的日更创作者",
     },
   },
   {
-    title: { en: "Brand marketers", zh: "品牌营销" },
+    title: { en: "Brand marketers", zh: "品牌营销人员" },
     description: {
-      en: "Consistent tone across all social channels",
-      zh: "所有社媒渠道保持语气一致",
+      en: "Maintain consistent brand voice across all social channels",
+      zh: "在所有社交渠道保持一致的品牌声音",
     },
   },
   {
-    title: { en: "Social agencies", zh: "社媒机构" },
+    title: { en: "Social agencies", zh: "社交媒体机构" },
     description: {
-      en: "Rapid iteration for client campaigns",
-      zh: "客户活动文案快速迭代",
+      en: "Rapid iteration and testing for client campaigns",
+      zh: "为客户项目提供快速迭代和文案测试",
     },
   },
   {
     title: { en: "Small businesses", zh: "小微企业" },
     description: {
-      en: "Professional posts without hiring copywriters",
-      zh: "专业文案无需聘请文案师",
+      en: "Create professional social posts without hiring copywriters",
+      zh: "无需聘请专业文案师即可创建专业的社媒内容",
     },
   },
 ];

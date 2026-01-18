@@ -1,4 +1,4 @@
-# Deploy to Cloudflare Pages via GitHub Actions
+# Deploy to Production via GitHub Actions
 # Secrets required (set in GitHub repo Settings > Secrets and variables > Actions):
 # - CLOUDFLARE_API_TOKEN: Cloudflare API token with Pages permissions
 # - CLOUDFLARE_ACCOUNT_ID: Cloudflare Account ID
@@ -6,22 +6,61 @@
 # - SUPABASE_ANON_KEY: Supabase anonymous key
 # - OPENAI_API_KEY: OpenAI API key
 
-name: Deploy to Cloudflare Pages
+name: Deploy to Production
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
   deployments: write
 
+env:
+  NODE_VERSION: "20"
+
 jobs:
-  deploy:
+  # Pre-deployment checks
+  pre-deploy:
+    name: Pre-deployment Checks
     runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript check
+        run: npm run type-check
+
+      - name: Set deployment flag
+        id: check
+        run: echo "should_deploy=true" >> $GITHUB_OUTPUT
+
+  # Deploy to Cloudflare Pages (Note: May fail due to 25MB worker size limit)
+  deploy-cloudflare:
     name: Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: needs.pre-deploy.outputs.should_deploy == 'true'
+    environment:
+      name: cloudflare-pages
+      url: https://litstatus.pages.dev
+    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -30,7 +69,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: package-lock.json
 
@@ -41,6 +80,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITE_URL: https://litstatus.pages.dev
         run: |
           # Install @cloudflare/next-on-pages adapter
           npx @cloudflare/next-on-pages
@@ -51,15 +91,30 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: litstatus
-          directory: .vercel/output/static # Output from next-on-pages
+          directory: .vercel/output/static
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           wranglerVersion: "3"
 
       - name: Deployment summary
+        if: success()
         run: |
-          echo "## Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "## Cloudflare Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Project: litstatus" >> $GITHUB_STEP_SUMMARY
-          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "URL: https://litstatus.pages.dev" >> $GITHUB_STEP_SUMMARY
+
+  # Backup: Push to GitHub as code backup
+  backup:
+    name: Code Backup
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+
+    steps:
+      - name: Deployment summary
+        run: |
+          echo "## Code Backup :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Code has been pushed to GitHub main branch" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

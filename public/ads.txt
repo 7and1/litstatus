@@ -1,0 +1,3 @@
+# Ads.txt file for LitStatus
+# This file is currently empty as we don't display ads
+# Update this file if you start using ad networks

@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { SECURITY_HEADERS, constantTimeEqual } from "@/lib/security";
+import { getSecurityHeaders } from "@/lib/security";
+import { requireSignedRequest, SIGNING_HEADERS } from "@/lib/requestSigning";
+import { checkRateLimit, createRateLimitHeaders } from "@/lib/security";
+import { logSecurityEvent } from "@/lib/securityEvents";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 const MAX_EXPORT_ROWS = 10000;
 
@@ -45,28 +48,97 @@ function toCsv(rows: WishlistRow[]): string {
 }
 
 export async function GET(request: Request) {
-  const headerToken = request.headers
-    .get("authorization")
-    ?.replace(/^Bearer\s+/i, "")
-    .trim();
-  const queryToken = new URL(request.url).searchParams.get("token")?.trim();
+  const securityHeaders = getSecurityHeaders();
 
-  const token = headerToken || queryToken;
-  const expectedToken = process.env.ADMIN_EXPORT_TOKEN;
+  // Rate limiting first
+  const ip = request.headers.get("cf-connecting-ip") ||
+             request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+             "unknown";
+  const rateResult = await checkRateLimit(`admin:export:${ip}`, 10, 60 * 1000);
 
-  if (!expectedToken) {
+  if (!rateResult.allowed) {
+    await logSecurityEvent({
+      event_type: "rate_limited",
+      severity: "warn",
+      user_id: null,
+      ip,
+      path: new URL(request.url).pathname,
+      user_agent: request.headers.get("user-agent"),
+      meta: { endpoint: "admin:export" },
+    });
     return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500, headers: SECURITY_HEADERS },
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { ...securityHeaders, ...createRateLimitHeaders(rateResult) },
+      },
     );
   }
 
-  // Use constant-time comparison to prevent timing attacks
-  if (!token || !constantTimeEqual(token, expectedToken)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401, headers: SECURITY_HEADERS },
-    );
+  // Check for signed request (preferred method)
+  const signingSecret = process.env.ADMIN_SIGNING_SECRET;
+  if (signingSecret) {
+    const signatureCheck = await requireSignedRequest(request, signingSecret);
+    if (!signatureCheck.valid) {
+      await logSecurityEvent({
+        event_type: "admin_signature_invalid",
+        severity: "warn",
+        user_id: null,
+        ip,
+        path: new URL(request.url).pathname,
+        user_agent: request.headers.get("user-agent"),
+        meta: { error: signatureCheck.error },
+      });
+      return NextResponse.json(
+        { error: "Unauthorized", details: signatureCheck.error },
+        {
+          status: 401,
+          headers: securityHeaders,
+        },
+      );
+    }
+  } else {
+    // Fallback to token-based auth for backward compatibility
+    const headerToken = request.headers
+      .get("authorization")
+      ?.replace(/^Bearer\s+/i, "")
+      .trim();
+    const queryToken = new URL(request.url).searchParams.get("token")?.trim();
+
+    const token = headerToken || queryToken;
+    const expectedToken = process.env.ADMIN_EXPORT_TOKEN;
+
+    if (!expectedToken) {
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500, headers: securityHeaders },
+      );
+    }
+
+    // Constant-time comparison to prevent timing attacks
+    // Edge Runtime compatible (no crypto module)
+    const timingSafeEqual = (a: string, b: string): boolean => {
+      if (a.length !== b.length) return false;
+      let result = 0;
+      for (let i = 0; i < a.length; i++) {
+        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+      }
+      return result === 0;
+    };
+    if (!token || !timingSafeEqual(token, expectedToken)) {
+      await logSecurityEvent({
+        event_type: "admin_token_invalid",
+        severity: "warn",
+        user_id: null,
+        ip,
+        path: new URL(request.url).pathname,
+        user_agent: request.headers.get("user-agent"),
+      });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: securityHeaders },
+      );
+    }
   }
 
   try {
@@ -78,10 +150,9 @@ export async function GET(request: Request) {
       .limit(MAX_EXPORT_ROWS);
 
     if (error) {
-      console.error("[Admin Export Error]", error.message);
       return NextResponse.json(
         { error: "Export failed" },
-        { status: 500, headers: SECURITY_HEADERS },
+        { status: 500, headers: securityHeaders },
       );
     }
 
@@ -91,17 +162,14 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": "attachment; filename=pro_wishlist.csv",
-        ...SECURITY_HEADERS,
+        ...securityHeaders,
+        ...createRateLimitHeaders(rateResult),
       },
     });
   } catch (error) {
-    console.error(
-      "[Admin Export Error]",
-      error instanceof Error ? error.message : "Unknown error",
-    );
     return NextResponse.json(
       { error: "Export failed" },
-      { status: 500, headers: SECURITY_HEADERS },
+      { status: 500, headers: securityHeaders },
     );
   }
 }

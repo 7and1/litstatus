@@ -1,63 +1,80 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
-import {
-  LIMITS,
-  SECURITY_HEADERS,
-  isValidEmail,
-  sanitizeString,
-} from "@/lib/security";
+import { getSecurityHeaders } from "@/lib/security";
+import { checkRateLimit, createRateLimitHeaders } from "@/lib/security";
+import { getClientIp } from "@/lib/ip";
+import { wishlistInputSchema, validateJsonBody } from "@/lib/schemas";
+import { logSecurityEvent } from "@/lib/securityEvents";
+import { generateRequestId, createResponseHeaders } from "@/lib/requestContext";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
+  const requestId = generateRequestId();
+  const securityHeaders = getSecurityHeaders();
+  const user = await getUserFromRequest(request);
+  const ip = getClientIp(request);
+
+  // Rate limiting
+  const identifier = user?.id ?? ip ?? "unknown";
+  const rateResult = await checkRateLimit(`wishlist:${identifier}`, 10, 60 * 1000);
+
+  if (!rateResult.allowed) {
+    await logSecurityEvent({
+      event_type: "rate_limited",
+      severity: "warn",
+      user_id: user?.id ?? null,
+      ip,
+      path: new URL(request.url).pathname,
+      user_agent: request.headers.get("user-agent"),
+      meta: { endpoint: "wishlist" },
+    });
+    return NextResponse.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: createResponseHeaders(requestId, {
+          ...securityHeaders,
+          ...createRateLimitHeaders(rateResult),
+        }),
+      },
+    );
+  }
+
+  // Validate request body with Zod
+  const validation = await validateJsonBody(request, wishlistInputSchema);
+  if (!validation.success) {
+    return NextResponse.json(
+      { error: validation.error },
+      { status: validation.status, headers: createResponseHeaders(requestId, securityHeaders) },
+    );
+  }
+
+  const { email, note, lang, variant } = validation.data;
+  const t = (en: string, zh: string) => (lang === "zh" ? zh : en);
+
+  // Add timeout for database operation
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Request timeout")), 28000)
+  );
+
   try {
-    const user = await getUserFromRequest(request);
-    const body = await request.json().catch(() => ({}));
-    const lang = body?.lang === "zh" ? "zh" : "en";
-    const t = (en: string, zh: string) => (lang === "zh" ? zh : en);
-
-    // Get and validate email
-    const rawEmail =
-      typeof body.email === "string" ? body.email.trim() : user?.email;
-    if (!rawEmail) {
-      return NextResponse.json(
-        { error: t("Email is required to join.", "需要邮箱才能加入。") },
-        { status: 400, headers: SECURITY_HEADERS },
-      );
-    }
-
-    const email = sanitizeString(rawEmail);
-    if (!isValidEmail(email)) {
-      return NextResponse.json(
-        { error: t("Invalid email address.", "邮箱地址无效。") },
-        { status: 400, headers: SECURITY_HEADERS },
-      );
-    }
-
-    // Validate note length
-    const note =
-      typeof body.note === "string" && body.note.trim()
-        ? sanitizeString(body.note).slice(0, LIMITS.MAX_NOTE_LENGTH)
-        : null;
-
-    // Validate variant length
-    const variant =
-      typeof body.variant === "string"
-        ? sanitizeString(body.variant).slice(0, LIMITS.MAX_VARIANT_LENGTH)
-        : null;
-
     const supabase = createSupabaseAdmin();
-    const { error } = await supabase.from("pro_wishlist").insert({
+    const dbPromise = supabase.from("pro_wishlist").insert({
       user_id: user?.id ?? null,
       email,
-      note,
+      note: note ?? null,
       lang,
-      variant,
+      variant: variant ?? null,
     });
+
+    const { error } = await Promise.race([dbPromise, timeoutPromise]) as { error: unknown };
 
     if (error) throw error;
 
+    // Fire-and-forget email notifications with timeout
     const resendKey = process.env.RESEND_API_KEY;
     const resendFrom = process.env.RESEND_FROM;
     if (resendKey && resendFrom) {
@@ -70,7 +87,8 @@ export async function POST(request: Request) {
           ? "<p>感谢加入 LitStatus Pro 预约名单。我们上线后会第一时间通知你。</p>"
           : "<p>Thanks for joining the LitStatus Pro wish list. We will notify you when Pro goes live.</p>";
 
-      await fetch("https://api.resend.com/emails", {
+      const emailTimeout = 5000; // 5 second timeout for email
+      const emailPromise = fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${resendKey}`,
@@ -82,11 +100,16 @@ export async function POST(request: Request) {
           subject,
           html,
         }),
-      }).catch(() => null);
+      });
+
+      void Promise.race([
+        emailPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Email timeout")), emailTimeout))
+      ]).catch(() => {});
 
       const notify = process.env.RESEND_NOTIFY_EMAIL;
       if (notify) {
-        await fetch("https://api.resend.com/emails", {
+        const notifyPromise = fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${resendKey}`,
@@ -98,15 +121,26 @@ export async function POST(request: Request) {
             subject: `New Pro wish list signup (${lang})`,
             html: `<p>${email} joined the Pro wish list.</p>`,
           }),
-        }).catch(() => null);
+        });
+
+        void Promise.race([
+          notifyPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Notify timeout")), emailTimeout))
+        ]).catch(() => {});
       }
     }
 
-    return NextResponse.json({ ok: true }, { headers: SECURITY_HEADERS });
+    return NextResponse.json(
+      { ok: true },
+      { headers: createResponseHeaders(requestId, {
+        ...securityHeaders,
+        ...createRateLimitHeaders(rateResult),
+      }) },
+    );
   } catch {
     return NextResponse.json(
-      { error: "Submission failed. Please try again later." },
-      { status: 500, headers: SECURITY_HEADERS },
+      { error: t("Submission failed. Please try again later.", "提交失败。请稍后重试。") },
+      { status: 500, headers: createResponseHeaders(requestId, securityHeaders) },
     );
   }
 }

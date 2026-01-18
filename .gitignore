@@ -64,3 +64,12 @@ logs/
 # temp
 .cache/
 dist/
+
+# deployment (local only)
+deploy.sh
+deploy-coordinator.sh
+DEPLOYMENT_PLAN.md
+PRE_FLIGHT_CHECKLIST.md
+DEPLOYMENT_READY.md
+ORCHESTRATION_COMPLETE.md
+SECURITY_AUDIT_REPORT.md

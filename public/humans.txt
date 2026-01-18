@@ -1,0 +1,14 @@
+/*  LitStatus - AI Caption Generator  */
+
+# Team
+Led by content creators and developers passionate about social media tools.
+
+# Contact
+Website: https://litstatus.com
+Email: support@litstatus.com
+
+# Social
+Twitter: @litstatus
+
+# Thanks
+Built with Next.js, Tailwind CSS, and AI.

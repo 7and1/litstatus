@@ -1,8 +1,10 @@
 import type { User } from "./auth";
 import { createSupabaseAdmin } from "./supabaseAdmin";
+import { getRedisClient } from "./redis";
 import { QUOTAS, type Plan, type QuotaStatus } from "./constants";
+import { withTiming } from "./performance";
 
-// Edge Runtime compatible in-memory quota store
+// Edge Runtime compatible in-memory quota store (fallback only)
 const fallbackStore = new Map<string, { count: number; expiresAt: number }>();
 
 function dateKey(date = new Date()) {
@@ -30,13 +32,42 @@ function incrementFallback(key: string) {
   return entry.count;
 }
 
-async function getGuestCount(ip: string) {
-  const key = `quota:guest:${ip}`;
-  return getFallback(key);
+async function getGuestCount(identifier: string, dateKey: string) {
+  return withTiming("quota.getGuestCount", async () => {
+    const redis = getRedisClient();
+    const key = `quota:guest:${identifier}:${dateKey}`;
+
+    if (redis) {
+      try {
+        const count = await redis.get<number>(key);
+        return count ?? 0;
+      } catch {
+        // Fall back to in-memory
+      }
+    }
+    return getFallback(key);
+  }, { identifier, dateKey });
 }
 
-async function incrementGuestCount(ip: string) {
-  const key = `quota:guest:${ip}`;
+async function incrementGuestCount(identifier: string, dateKey: string) {
+  const redis = getRedisClient();
+  const key = `quota:guest:${identifier}:${dateKey}`;
+
+  if (redis) {
+    try {
+      const newCount = await redis.incr(key);
+      if (newCount === 1) {
+        // Set expiration at end of day (UTC)
+        const now = new Date();
+        const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+        const ttl = Math.max(1, Math.floor((endOfDay.getTime() - now.getTime()) / 1000));
+        await redis.expire(key, ttl);
+      }
+      return newCount;
+    } catch {
+      // Fall back to in-memory
+    }
+  }
   return incrementFallback(key);
 }
 
@@ -49,52 +80,106 @@ type Profile = {
 };
 
 async function getOrCreateProfile(user: User): Promise<Profile> {
-  const supabase = createSupabaseAdmin();
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("id,email,is_pro,daily_usage_count,last_reset_time")
-    .eq("id", user.id)
-    .maybeSingle();
+  return withTiming("quota.getOrCreateProfile", async () => {
+    const redis = getRedisClient();
+    const cacheKey = `quota:profile:${user.id}`;
+    const CACHE_TTL = 60; // 60 seconds
 
-  if (error) throw error;
+    // Try cache first
+    if (redis) {
+      try {
+        const cached = await redis.get<Profile>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      } catch {
+        // Continue to DB
+      }
+    }
 
-  if (profile) return profile;
+    const supabase = createSupabaseAdmin();
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id,email,is_pro,daily_usage_count,last_reset_time")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  const { data: inserted, error: insertError } = await supabase
-    .from("profiles")
-    .insert({
-      id: user.id,
-      email: user.email ?? null,
-      is_pro: false,
-      daily_usage_count: 0,
-      last_reset_time: new Date().toISOString(),
-    })
-    .select("id,email,is_pro,daily_usage_count,last_reset_time")
-    .single();
+    if (error) throw error;
 
-  if (insertError) throw insertError;
-  return inserted;
+    if (profile) {
+      // Cache the profile
+      if (redis) {
+        try {
+          await redis.set(cacheKey, profile, { ex: CACHE_TTL });
+        } catch {
+          // Ignore cache errors
+        }
+      }
+      return profile;
+    }
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        email: user.email ?? null,
+        is_pro: false,
+        daily_usage_count: 0,
+        last_reset_time: new Date().toISOString(),
+      })
+      .select("id,email,is_pro,daily_usage_count,last_reset_time")
+      .single();
+
+    if (insertError) throw insertError;
+
+    // Cache the new profile
+    if (redis) {
+      try {
+        await redis.set(cacheKey, inserted, { ex: CACHE_TTL });
+      } catch {
+        // Ignore cache errors
+      }
+    }
+
+    return inserted;
+  }, { userId: user.id });
 }
 
 async function resetProfileIfNeeded(profile: Profile): Promise<Profile> {
-  const supabase = createSupabaseAdmin();
-  const lastReset = profile.last_reset_time
-    ? new Date(profile.last_reset_time)
-    : null;
-  const nowKey = dateKey();
-  const lastKey = lastReset ? dateKey(lastReset) : null;
+  return withTiming("quota.resetProfileIfNeeded", async () => {
+    const redis = getRedisClient();
+    const cacheKey = `quota:profile:${profile.id}`;
+    const CACHE_TTL = 60; // 60 seconds
 
-  if (lastKey && lastKey === nowKey) return profile;
+    const supabase = createSupabaseAdmin();
+    const lastReset = profile.last_reset_time
+      ? new Date(profile.last_reset_time)
+      : null;
+    const nowKey = dateKey();
+    const lastKey = lastReset ? dateKey(lastReset) : null;
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({ daily_usage_count: 0, last_reset_time: new Date().toISOString() })
-    .eq("id", profile.id)
-    .select("id,email,is_pro,daily_usage_count,last_reset_time")
-    .single();
+    if (lastKey && lastKey === nowKey) return profile;
 
-  if (error) throw error;
-  return data;
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ daily_usage_count: 0, last_reset_time: new Date().toISOString() })
+      .eq("id", profile.id)
+      .select("id,email,is_pro,daily_usage_count,last_reset_time")
+      .single();
+
+    if (error) throw error;
+
+    // Update cache
+    if (redis) {
+      try {
+        await redis.set(cacheKey, data, { ex: CACHE_TTL });
+      } catch {
+        // Ignore cache errors
+      }
+    }
+
+    return data;
+  }, { profileId: profile.id });
 }
 
 function buildStatus(plan: Plan, count: number, isPro: boolean): QuotaStatus {
@@ -114,12 +199,17 @@ function buildStatus(plan: Plan, count: number, isPro: boolean): QuotaStatus {
 export async function getQuotaStatus({
   user,
   ip,
+  fingerprint,
 }: {
   user: User | null;
   ip: string | null;
+  fingerprint?: string;
 }): Promise<QuotaStatus> {
   if (!user) {
-    const count = ip ? await getGuestCount(ip) : 0;
+    // Use device fingerprint as primary identifier, IP as fallback
+    const identifier = fingerprint || ip || "unknown";
+    const key = dateKey();
+    const count = await getGuestCount(identifier, key);
     return buildStatus("guest", count, false);
   }
 
@@ -136,24 +226,23 @@ export async function getQuotaStatus({
 export async function consumeQuota({
   user,
   ip,
+  fingerprint,
 }: {
   user: User | null;
   ip: string | null;
+  fingerprint?: string;
 }): Promise<{ allowed: boolean; status: QuotaStatus }> {
   if (!user) {
-    if (!ip) {
-      return {
-        allowed: false,
-        status: buildStatus("guest", QUOTAS.guest, false),
-      };
-    }
+    // Use device fingerprint as primary identifier, IP as fallback
+    const identifier = fingerprint || ip || "unknown";
+    const key = dateKey();
 
-    const count = await getGuestCount(ip);
+    const count = await getGuestCount(identifier, key);
     if (count >= QUOTAS.guest) {
       return { allowed: false, status: buildStatus("guest", count, false) };
     }
 
-    const next = await incrementGuestCount(ip);
+    const next = await incrementGuestCount(identifier, key);
     return { allowed: true, status: buildStatus("guest", next, false) };
   }
 
@@ -170,6 +259,10 @@ export async function consumeQuota({
   }
 
   const supabase = createSupabaseAdmin();
+  const redis = getRedisClient();
+  const cacheKey = `quota:profile:${profile.id}`;
+  const CACHE_TTL = 60; // 60 seconds
+
   const { data, error } = await supabase
     .from("profiles")
     .update({
@@ -181,6 +274,15 @@ export async function consumeQuota({
     .single();
 
   if (error) throw error;
+
+  // Update cache
+  if (redis) {
+    try {
+      await redis.set(cacheKey, data, { ex: CACHE_TTL });
+    } catch {
+      // Ignore cache errors
+    }
+  }
 
   return {
     allowed: true,

@@ -1,68 +1,92 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { LIMITS, SECURITY_HEADERS, sanitizeString } from "@/lib/security";
+import { getSecurityHeaders } from "@/lib/security";
+import { checkRateLimit, createRateLimitHeaders, sanitizeString, LIMITS } from "@/lib/security";
+import { getClientIp } from "@/lib/ip";
+import { feedbackInputSchema, validateJsonBody } from "@/lib/schemas";
+import { logSecurityEvent } from "@/lib/securityEvents";
+import { generateRequestId, createResponseHeaders } from "@/lib/requestContext";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
+  const requestId = generateRequestId();
+  const securityHeaders = getSecurityHeaders();
+  const user = await getUserFromRequest(request);
+  const ip = getClientIp(request);
+
+  // Rate limiting
+  const identifier = user?.id ?? ip ?? "unknown";
+  const rateResult = await checkRateLimit(`feedback:${identifier}`, 20, 60 * 1000);
+
+  if (!rateResult.allowed) {
+    await logSecurityEvent({
+      event_type: "rate_limited",
+      severity: "warn",
+      user_id: user?.id ?? null,
+      ip,
+      path: new URL(request.url).pathname,
+      user_agent: request.headers.get("user-agent"),
+      meta: { endpoint: "feedback" },
+    });
+    return NextResponse.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: createResponseHeaders(requestId, {
+          ...securityHeaders,
+          ...createRateLimitHeaders(rateResult),
+        }),
+      },
+    );
+  }
+
+  // Validate request body with Zod
+  const validation = await validateJsonBody(request, feedbackInputSchema);
+  if (!validation.success) {
+    return NextResponse.json(
+      { error: validation.error },
+      { status: validation.status, headers: createResponseHeaders(requestId, securityHeaders) },
+    );
+  }
+
+  const { rating, mode, caption, hashtags, detected_object, lang, variant } = validation.data;
+
+  // Add timeout for database operation
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Request timeout")), 28000)
+  );
+
   try {
-    const user = await getUserFromRequest(request);
-    const body = await request.json().catch(() => ({}));
-
-    const rating = Number(body.rating);
-    const lang: "en" | "zh" = body?.lang === "zh" ? "zh" : "en";
-    const t = (en: string, zh: string) => (lang === "zh" ? zh : en);
-
-    const mode =
-      typeof body.mode === "string" ? sanitizeString(body.mode) : null;
-    const caption =
-      typeof body.caption === "string"
-        ? sanitizeString(body.caption).slice(0, LIMITS.MAX_CAPTION_LENGTH)
-        : null;
-    const hashtags =
-      typeof body.hashtags === "string"
-        ? sanitizeString(body.hashtags).slice(0, LIMITS.MAX_HASHTAGS_LENGTH)
-        : null;
-    const detected =
-      typeof body.detected_object === "string"
-        ? sanitizeString(body.detected_object)
-        : null;
-    const variant =
-      typeof body.variant === "string"
-        ? sanitizeString(body.variant).slice(0, LIMITS.MAX_VARIANT_LENGTH)
-        : null;
-
-    if (![1, -1].includes(rating)) {
-      return NextResponse.json(
-        { error: t("Invalid rating.", "无效评分。") },
-        { status: 400, headers: SECURITY_HEADERS },
-      );
-    }
-
     const supabase = createSupabaseAdmin();
-    const { error } = await supabase.from("feedback").insert({
+    const dbPromise = supabase.from("feedback").insert({
       user_id: user?.id ?? null,
       rating,
-      mode,
-      caption,
-      hashtags,
-      detected_object: detected,
+      mode: mode ?? null,
+      caption: caption ?? null,
+      hashtags: hashtags ?? null,
+      detected_object: detected_object ?? null,
       lang,
-      variant,
+      variant: variant ?? null,
     });
+
+    const { error } = await Promise.race([dbPromise, timeoutPromise]) as { error: unknown };
 
     if (error) throw error;
 
-    return NextResponse.json({ ok: true }, { headers: SECURITY_HEADERS });
-  } catch (error) {
-    console.error(
-      "[Feedback API Error]",
-      error instanceof Error ? error.message : "Unknown error",
+    return NextResponse.json(
+      { ok: true },
+      { headers: createResponseHeaders(requestId, {
+        ...securityHeaders,
+        ...createRateLimitHeaders(rateResult),
+      }) },
     );
+  } catch (error) {
     return NextResponse.json(
       { error: "Feedback failed." },
-      { status: 500, headers: SECURITY_HEADERS },
+      { status: 500, headers: createResponseHeaders(requestId, securityHeaders) },
     );
   }
 }

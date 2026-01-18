@@ -2,30 +2,25 @@
 # Copy this file to wrangler.toml and fill in your values
 # wrangler.toml is git-ignored for security
 
-# Cloudflare Account ID
-# Set via environment variable: CLOUDFLARE_ACCOUNT_ID
-# Or uncomment below (NOT recommended for public repos):
-# account_id = "your-account-id-here"
-
 name = "litstatus"
-compatibility_date = "2024-01-01"
-
-# Build configuration for Next.js
-[build]
-command = "npm run build"
-cwd = ". "
+compatibility_date = "2024-12-01"
+pages_build_output_dir = ".vercel/output/static"
 
 # Environment variables (set in Cloudflare dashboard or GitHub Secrets)
-# [vars]
-# NEXT_PUBLIC_SUPABASE_URL = ""
-# NEXT_PUBLIC_SUPABASE_ANON_KEY = ""
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://litstatus.pages.dev"
 
-# Production environment variables
-[env.production]
-routes = [
-  { pattern = "/*", zone_name = "litstatus.com" }
-]
+# Note: Cloudflare Pages has a 25MB worker size limit
+# For Next.js apps, this may be exceeded with large bundles
+# Consider using Vercel or other providers if deployment fails
 
-# Development environment
-[env.development]
-name = "litstatus-dev"
+# Production environment variables (optional)
+# [env.production]
+# name = "litstatus-production"
+# routes = [
+#   { pattern = "litstatus.com/*", zone_name = "litstatus.com" }
+# ]
+
+# Development environment (optional)
+# [env.development]
+# name = "litstatus-dev"

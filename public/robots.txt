@@ -1,0 +1,16 @@
+# robots.txt for LitStatus
+
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /api/admin/
+Disallow: /api/events/
+Disallow: /api/security/
+
+# Disallow authentication routes
+Disallow: /auth/
+
+# Sitemap location
+Sitemap: https://litstatus.com/sitemap.xml

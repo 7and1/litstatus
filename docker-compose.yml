@@ -1,26 +1,73 @@
+# ============================================================================
+# Docker Compose configuration for litstatus.com
+# Production-ready configuration with health checks and monitoring
+# ============================================================================
+
 services:
   litstatus-web:
     build:
       context: .
+      dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://litstatus.com}
         NEXT_PUBLIC_PLAUSIBLE_DOMAIN: ${NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
         NEXT_PUBLIC_PLAUSIBLE_SRC: ${NEXT_PUBLIC_PLAUSIBLE_SRC}
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
+        BUILD_TIME: ${BUILD_TIME:-}
     container_name: litstatus-web
     restart: unless-stopped
+
+    # Environment variables (secrets from .env file)
     env_file:
       - .env
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: "0.0.0.0"
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    # Port mapping
     ports:
       - "3023:3000"
+
+    # Networks
     networks:
       - proxy-tier
       - supabase-tier
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Resource limits (optional but recommended)
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Labels for monitoring/organizing
+    labels:
+      - "com.litstatus.description=LitStatus Web Application"
+      - "com.litstatus.version=${APP_VERSION:-0.1.0}"
+      - "com.litstatus.managed-by=docker-compose"
 
 networks:
   proxy-tier:
@@ -29,3 +76,12 @@ networks:
   supabase-tier:
     external: true
     name: supabase_default
+
+# ============================================================================
+# Usage:
+#   docker-compose up -d          # Start services
+#   docker-compose logs -f        # View logs
+#   docker-compose ps             # Check status
+#   docker-compose down           # Stop services
+#   docker-compose build --no-cache  # Rebuild without cache
+# ============================================================================
