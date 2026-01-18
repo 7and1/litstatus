@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+// Use Node.js runtime to avoid Edge Function 1MB size limit
+// Fonts (580KB) exceed Edge limit
+export const runtime = "nodejs";
 
 const regularFont = fetch(
   new URL("./fonts/NotoSansSC-Regular.otf", import.meta.url),
