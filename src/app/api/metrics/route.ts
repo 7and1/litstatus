@@ -50,7 +50,8 @@ function recordRequest(method: string, endpoint: string, status: number) {
 }
 
 // Export function to be used by middleware
-export function recordMetric(method: string, endpoint: string, status: number, duration: number) {
+// Function to record metrics (internal use, not exported for Next.js 15 compatibility)
+function recordMetric(method: string, endpoint: string, status: number, duration: number) {
   recordRequest(method, endpoint, status);
   recordLatency(endpoint, duration);
 }
@@ -233,6 +234,7 @@ export async function GET(request: Request) {
 }
 
 // Export metrics recording function for use in other parts of the app
-export function recordOperationMetric(operation: string, duration: number, success: boolean) {
+// Internal function for operation metrics (not exported for Next.js 15 compatibility)
+function recordOperationMetric(operation: string, duration: number, success: boolean) {
   perfMonitor.record(operation, duration, success);
 }

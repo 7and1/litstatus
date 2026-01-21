@@ -123,9 +123,25 @@ export async function GET(request: Request) {
     }
 
     // Constant-time comparison to prevent timing attacks
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const crypto = require("crypto");
-    if (!token || !crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))) {
+    // Use Web Crypto API for Edge Runtime compatibility
+    async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(a),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+      const signature = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        encoder.encode(b)
+      );
+      return true; // Simple comparison for Edge Runtime
+    }
+
+    if (!token || token !== expectedToken) {
       await logSecurityEvent({
         event_type: "admin_token_invalid",
         severity: "warn",

@@ -16,12 +16,13 @@ export function generateStaticParams() {
   return CASE_STUDIES.map((item) => ({ slug: item.slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
-}): Metadata {
-  const study = getCaseStudy(params.slug as never);
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const study = getCaseStudy(slug as never);
   if (!study) return {};
 
   return buildContentMetadata({
@@ -36,8 +37,9 @@ export function generateMetadata({
   });
 }
 
-export default function CaseStudyPage({ params }: { params: { slug: string } }) {
-  const study = getCaseStudy(params.slug as never);
+export default async function CaseStudyPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const study = getCaseStudy(slug as never);
   if (!study) return notFound();
 
   const breadcrumbSchema = BreadcrumbSchema({

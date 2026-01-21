@@ -1,16 +1,8 @@
 import { ImageResponse } from "next/og";
 
-// Use Node.js runtime to avoid Edge Function 1MB size limit
-// Fonts (580KB) exceed Edge limit
-export const runtime = "nodejs";
-
-const regularFont = fetch(
-  new URL("./fonts/NotoSansSC-Regular.otf", import.meta.url),
-).then((res) => res.arrayBuffer());
-
-const boldFont = fetch(
-  new URL("./fonts/NotoSansSC-Bold.otf", import.meta.url),
-).then((res) => res.arrayBuffer());
+// Use Edge Runtime for Cloudflare Pages compatibility
+// Using system fonts to avoid Edge Function size limits
+export const runtime = "edge";
 
 const COPY = {
   en: {
@@ -49,7 +41,7 @@ export async function GET(request: Request) {
           padding: size === "square" ? "80px" : "72px",
           background: "linear-gradient(135deg, #0b0b0f 0%, #0f1424 50%, #101522 100%)",
           color: "#f8fafc",
-          fontFamily: "NotoSans",
+          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
           position: "relative",
           overflow: "hidden",
         }}
@@ -116,18 +108,8 @@ export async function GET(request: Request) {
     {
       width,
       height,
-      fonts: [
-        {
-          name: "NotoSans",
-          data: regular,
-          weight: 400,
-        },
-        {
-          name: "NotoSans",
-          data: bold,
-          weight: 700,
-        },
-      ],
+      // Using system fonts for Edge Runtime compatibility
+      fonts: [],
     },
   );
 }

@@ -16,12 +16,13 @@ export function generateStaticParams() {
   return USE_CASES.map((item) => ({ slug: item.slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
-}): Metadata {
-  const useCase = getUseCase(params.slug as never);
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const useCase = getUseCase(slug as never);
   if (!useCase) return {};
 
   return buildContentMetadata({
@@ -36,8 +37,9 @@ export function generateMetadata({
   });
 }
 
-export default function UseCasePageZh({ params }: { params: { slug: string } }) {
-  const useCase = getUseCase(params.slug as never);
+export default async function UseCasePageZh({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const useCase = getUseCase(slug as never);
   if (!useCase) return notFound();
 
   const breadcrumbSchema = BreadcrumbSchema({
