@@ -5,6 +5,12 @@
 # - SUPABASE_URL: Supabase project URL
 # - SUPABASE_ANON_KEY: Supabase anonymous key
 # - OPENAI_API_KEY: OpenAI API key
+#
+# NOTE: Cloudflare Pages deployment is DISABLED due to Next.js 16 incompatibility
+# @cloudflare/next-on-pages requires Next.js 14-15, but this project uses Next.js 16.1.2
+# To enable Cloudflare deployment, either:
+# 1. Downgrade Next.js to 15.x, or
+# 2. Wait for @cloudflare/next-on-pages to support Next.js 16
 
 name: Deploy to Production
 
@@ -51,12 +57,12 @@ jobs:
         id: check
         run: echo "should_deploy=true" >> $GITHUB_OUTPUT
 
-  # Deploy to Cloudflare Pages (Note: May fail due to 25MB worker size limit)
+  # Deploy to Cloudflare Pages (DISABLED - Next.js 16 incompatible)
   deploy-cloudflare:
     name: Deploy to Cloudflare Pages
     runs-on: ubuntu-latest
     needs: pre-deploy
-    if: needs.pre-deploy.outputs.should_deploy == 'true'
+    if: false # Disabled - see note at top of file
     environment:
       name: cloudflare-pages
       url: https://litstatus.pages.dev
@@ -112,9 +118,16 @@ jobs:
     needs: pre-deploy
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Deployment summary
         run: |
           echo "## Code Backup :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Code has been pushed to GitHub main branch" >> $GITHUB_STEP_SUMMARY
           echo "Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **VPS**: Requires \`VPS_SSH_PRIVATE_KEY\` secret (not configured)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cloudflare Pages**: Disabled (Next.js 16 incompatible with @cloudflare/next-on-pages)" >> $GITHUB_STEP_SUMMARY
