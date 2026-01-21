@@ -101,11 +101,15 @@ export function withLoading<P extends object>(
   Component: ComponentType<P>,
   fallback?: React.ReactNode
 ) {
-  return (props: P) => (
-    <LoadingWrapper fallback={fallback}>
-      <Component {...props} />
-    </LoadingWrapper>
-  );
+  function WithLoadingComponent(props: P) {
+    return (
+      <LoadingWrapper fallback={fallback}>
+        <Component {...props} />
+      </LoadingWrapper>
+    );
+  }
+  WithLoadingComponent.displayName = `withLoading(${Component.displayName || Component.name})`;
+  return WithLoadingComponent;
 }
 
 // Skeleton variants for different content types

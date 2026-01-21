@@ -12,7 +12,7 @@ export interface UseToastReturn {
   warning: (message: string, duration?: number) => string;
   info: (message: string, duration?: number) => string;
   removeToast: (id: string) => void;
-  ToastComponent: () => any;
+  ToastComponent: () => JSX.Element;
 }
 
 export function useToast(): UseToastReturn {

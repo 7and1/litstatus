@@ -79,7 +79,7 @@ export async function safeJsonFetch<T>(url: string, options: FetchOptions = {}):
 
 export function createApiError(message: string, status: number = 500): Error {
   const error = new Error(message);
-  (error as any).statusCode = status;
-  (error as any).code = "API_ERROR";
+  (error as Error & { statusCode: number; code: string }).statusCode = status;
+  (error as Error & { statusCode: number; code: string }).code = "API_ERROR";
   return error;
 }

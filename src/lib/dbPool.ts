@@ -79,7 +79,7 @@ export async function batchInsert<T extends Record<string, unknown>>(
 
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
-    const { error } = await client.from(table).insert(batch as any);
+    const { error } = await client.from(table).insert(batch as never);
 
     if (error) {
       console.error(`Batch insert failed for ${table}:`, error);
