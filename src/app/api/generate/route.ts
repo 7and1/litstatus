@@ -22,8 +22,9 @@ import {
   validateImageContent,
   generateDeviceFingerprint,
 } from "@/lib/security";
-import { logError, createAppError } from "@/lib/errors";
+import { logError } from "@/lib/errors";
 import { generateRequestId, createResponseHeaders, logger } from "@/lib/requestContext";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const runtime = "edge";
 export const maxDuration = 60;
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
     userId = user?.id ?? null;
     const ip = getClientIp(request);
     ipAddr = ip ?? null;
+    const fingerprint = generateDeviceFingerprint(request);
 
     logger.info("Generate request started", {
       requestId,
@@ -151,6 +153,13 @@ export async function POST(request: Request) {
     const modeValue = formData.get("mode");
     const imageValue = formData.get("image");
     const langValue = formData.get("lang");
+    const turnstileValue =
+      (typeof formData.get("turnstileToken") === "string"
+        ? (formData.get("turnstileToken") as string)
+        : null) ??
+      (typeof formData.get("cf-turnstile-response") === "string"
+        ? (formData.get("cf-turnstile-response") as string)
+        : null);
 
     const lang = langValue === "zh" ? "zh" : "en";
     const t = (en: string, zh: string) => (lang === "zh" ? zh : en);
@@ -160,6 +169,56 @@ export async function POST(request: Request) {
     );
     const text = typeof textValue === "string" ? textValue.trim() : "";
     const imageFile = imageValue instanceof File ? imageValue : null;
+
+    if (!turnstileValue) {
+      return NextResponse.json(
+        {
+          error: t(
+            "Please complete the verification.",
+            "请完成验证。",
+          ),
+        },
+        { status: 400, headers: responseHeaders },
+      );
+    }
+
+    const turnstileResult = await verifyTurnstileToken({
+      token: turnstileValue,
+      ip,
+    });
+
+    if (!turnstileResult.success) {
+      const turnstileErrors = turnstileResult["error-codes"] ?? [];
+      if (turnstileErrors.includes("missing-input-secret")) {
+        return NextResponse.json(
+          {
+            error: t(
+              "Verification is unavailable. Please try again later.",
+              "验证码服务暂不可用，请稍后再试。",
+            ),
+          },
+          { status: 500, headers: responseHeaders },
+        );
+      }
+      await logSecurityEvent({
+        event_type: "turnstile_failed",
+        severity: "warn",
+        user_id: user?.id ?? null,
+        ip: ip ?? null,
+        path: pathname,
+        user_agent: request.headers.get("user-agent"),
+        meta: { error_codes: turnstileErrors },
+      });
+      return NextResponse.json(
+        {
+          error: t(
+            "Verification failed. Please try again.",
+            "验证失败，请重试。",
+          ),
+        },
+        { status: 403, headers: responseHeaders },
+      );
+    }
 
     if (!text && !imageFile) {
       return NextResponse.json(
@@ -201,31 +260,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const status = await getQuotaStatus({ user, ip });
-
-    if (!status.isPro && mode !== "Standard") {
-      return NextResponse.json(
-        {
-          error: t(
-            "This mode is available for Pro only.",
-            "此模式仅对 Pro 开放。",
-          ),
-        },
-        { status: 403, headers: responseHeaders },
-      );
-    }
-
-    if (!status.isPro && imageFile) {
-      return NextResponse.json(
-        {
-          error: t(
-            "Vision is available for Pro only.",
-            "识图功能仅对 Pro 开放。",
-          ),
-        },
-        { status: 403, headers: responseHeaders },
-      );
-    }
+    const status = await getQuotaStatus({ user, ip, fingerprint });
 
     if (status.remaining !== null && status.remaining <= 0) {
       return NextResponse.json(
@@ -234,7 +269,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { allowed, status: updatedStatus } = await consumeQuota({ user, ip });
+    const { allowed, status: updatedStatus } = await consumeQuota({ user, ip, fingerprint });
 
     if (!allowed) {
       return NextResponse.json(

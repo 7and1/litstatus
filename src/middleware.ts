@@ -41,7 +41,12 @@ export function middleware(request: NextRequest) {
   );
 
   // Content Security Policy (basic - can be expanded)
-  const scriptSrc = ["'self'", "'unsafe-inline'", plausibleOrigin];
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    plausibleOrigin,
+    "https://challenges.cloudflare.com",
+  ];
   if (isDev) scriptSrc.push("'unsafe-eval'");
   scriptSrc.push("https://www.googletagmanager.com");
 
@@ -52,6 +57,7 @@ export function middleware(request: NextRequest) {
     "https://api.resend.com",
     "https://www.google-analytics.com",
     plausibleOrigin,
+    "https://challenges.cloudflare.com",
   ];
   if (plausibleDomain) {
     connectSrc.push(`https://${plausibleDomain}`);
@@ -64,6 +70,7 @@ export function middleware(request: NextRequest) {
     "img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com",
     "font-src 'self' data:",
     `connect-src ${connectSrc.join(" ")}`,
+    "frame-src https://challenges.cloudflare.com",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",

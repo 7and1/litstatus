@@ -30,8 +30,8 @@ export default function PricingPage() {
         lang="en"
         title={{ en: "Access", zh: "权限" }}
         subtitle={{
-          en: "Pro is wish list only. No pricing yet.",
-          zh: "Pro 目前仅预约，无定价。",
+          en: "Everything is free with captcha verification.",
+          zh: "全功能免费使用，仅需完成验证码。",
         }}
       >
         <PricingContent />

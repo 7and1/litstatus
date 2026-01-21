@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { LIMITS, MODES, type Mode, type QuotaStatus } from "@/lib/constants";
 import { localizePath, type Lang } from "@/lib/i18n";
 import { trackEvent, trackFunnelEvent } from "@/lib/analytics";
@@ -24,11 +22,11 @@ import {
   HERO_VARIANTS,
   STEPS,
   STATS,
-  TIERS,
   pick,
 } from "@/lib/content";
 import { CASE_STUDIES, USE_CASES } from "@/lib/useCases";
-import { safeFetch, handleResponseError, logError, setupGlobalErrorHandlers } from "@/lib/errors";
+import { safeFetch, logError, setupGlobalErrorHandlers } from "@/lib/errors";
+import Turnstile, { type TurnstileHandle } from "@/components/Turnstile";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://litstatus.com")
   .replace(/\/$/, "");
@@ -46,15 +44,6 @@ const HOME_SCHEMA_COPY = {
     mainEntityName: "LitStatus AI 文案生成器",
   },
 } as const;
-
-// Local Session type for browser client compatibility
-type Session = {
-  access_token: string;
-  user: {
-    id: string;
-    email?: string;
-  };
-};
 
 type ToastState = {
   show: boolean;
@@ -89,11 +78,8 @@ const COPY = {
   en: {
     headerBrand: "LitStatus",
     headerDomain: "litstatus.com",
-    login: "Log in",
-    logout: "Log out",
     quotaUnlimited: "Unlimited",
-    badgePro: "Pro unlocked",
-    badgeStandard: "Standard mode",
+    badgeFree: "Free access",
     generatorKicker: "Generator",
     generatorTitle: "Status Forge",
     modeHint: "Pick a tone and generate instantly.",
@@ -101,8 +87,8 @@ const COPY = {
     captionInputLabel: "Describe your moment",
     placeholder: "Example: Just posted my AJ1s—need a savage caption...",
     textCountLabel: "Characters",
-    uploadLabel: "Upload image (Pro Vision)",
-    uploadHint: "Vision is available in Pro.",
+    uploadLabel: "Upload image (Vision)",
+    uploadHint: "Vision is included for everyone.",
     uploadTypeHint: "PNG, JPG, WEBP, GIF up to 10MB.",
     uploadSelected: "Selected:",
     generate: "Generate",
@@ -138,12 +124,11 @@ const COPY = {
     caseStudyLabel: "Case study",
     historyTitle: "Recent generations",
     historyEmpty: "No history yet.",
-    wishTitle: "Pro waitlist",
-    wishDesc: "Pro features are ready. Join the waitlist to get notified first.",
-    wishPlaceholder: "Email for early access",
-    wishButton: "Join waitlist",
-    wishSuccess: "You're on the list. We'll notify you.",
-    wishError: "Submission failed.",
+    captchaTitle: "Verification",
+    captchaHint: "Complete the verification to generate.",
+    captchaMissing: "Please complete the verification.",
+    captchaFailed: "Verification failed. Please try again.",
+    captchaMisconfigured: "Captcha misconfigured. Please try again later.",
     railTitle: "Your access",
     railSubtitle: "Live quota and status.",
     adBanner: "Ad banner slot: brand placement / affiliate / CPM",
@@ -170,11 +155,8 @@ const COPY = {
   zh: {
     headerBrand: "LitStatus",
     headerDomain: "litstatus.com",
-    login: "登录",
-    logout: "退出",
     quotaUnlimited: "无限",
-    badgePro: "Pro 全解锁",
-    badgeStandard: "Standard 模式",
+    badgeFree: "免费开放",
     generatorKicker: "生成器",
     generatorTitle: "文案工坊",
     modeHint: "选择语气，立即生成。",
@@ -182,8 +164,8 @@ const COPY = {
     captionInputLabel: "描述你的场景",
     placeholder: "例如：刚晒完 AJ1，想来一句狠的...",
     textCountLabel: "字符数",
-    uploadLabel: "上传图片 (Pro Vision)",
-    uploadHint: "识图仅对 Pro 开放。",
+    uploadLabel: "上传图片 (识图)",
+    uploadHint: "识图功能全员可用。",
     uploadTypeHint: "支持 PNG/JPG/WEBP/GIF，最大 10MB。",
     uploadSelected: "已选择：",
     generate: "生成",
@@ -219,12 +201,11 @@ const COPY = {
     caseStudyLabel: "长文案例",
     historyTitle: "最近生成",
     historyEmpty: "暂无历史记录。",
-    wishTitle: "Pro 预约",
-    wishDesc: "Pro 功能已就绪，加入预约第一时间通知。",
-    wishPlaceholder: "用于通知的邮箱",
-    wishButton: "加入预约",
-    wishSuccess: "已加入，我们会通知你。",
-    wishError: "提交失败。",
+    captchaTitle: "验证码",
+    captchaHint: "完成验证后才能生成。",
+    captchaMissing: "请完成验证。",
+    captchaFailed: "验证失败，请重试。",
+    captchaMisconfigured: "验证码配置异常，请稍后重试。",
     railTitle: "当前权限",
     railSubtitle: "实时配额与状态。",
     adBanner: "广告 Banner 位：可接入品牌合作 / 推荐位 / CPM 广告条",
@@ -251,8 +232,8 @@ const COPY = {
 } as const;
 
 const PLAN_LABELS = {
-  en: { guest: "Guest", user: "User", pro: "Pro" },
-  zh: { guest: "访客", user: "用户", pro: "Pro" },
+  en: { guest: "Free", user: "Free", pro: "Free" },
+  zh: { guest: "免费", user: "免费", pro: "免费" },
 } as const;
 
 type HomeClientProps = {
@@ -260,9 +241,6 @@ type HomeClientProps = {
 };
 
 export default function HomeClient({ lang }: HomeClientProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [session, setSession] = useState<Session | null>(null);
   const [mode, setMode] = useState<Mode>("Standard");
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -274,16 +252,16 @@ export default function HomeClient({ lang }: HomeClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [quota, setQuota] = useState<QuotaStatus | null>(null);
-  const [wishEmail, setWishEmail] = useState("");
-  const [wishStatus, setWishStatus] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({
     show: false,
     message: "",
     type: "success",
   });
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const turnstileRef = useRef<TurnstileHandle | null>(null);
   const generatorRef = useRef<HTMLDivElement>(null);
   const heroVariant = useABVariant("hero_demo_v1");
   const schemaCopy = HOME_SCHEMA_COPY[lang];
@@ -302,11 +280,6 @@ export default function HomeClient({ lang }: HomeClientProps) {
       trackFunnelEvent(event, buildEventProps(extra)),
     [buildEventProps],
   );
-  const toggleLang = () => {
-    const nextLang = lang === "en" ? "zh" : "en";
-    router.push(localizePath(pathname, nextLang));
-  };
-
   // Toast notification
   const showToast = useCallback(
     (message: string, type: "success" | "error" = "success") => {
@@ -432,22 +405,6 @@ export default function HomeClient({ lang }: HomeClientProps) {
   }, [loading, error]);
 
   useEffect(() => {
-    supabaseBrowser.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-    });
-
-    const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
-      (_event, updatedSession) => {
-        setSession(updatedSession);
-      },
-    );
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(HISTORY_KEY);
       if (raw) {
@@ -466,15 +423,10 @@ export default function HomeClient({ lang }: HomeClientProps) {
     );
   }, [history]);
 
-  const authHeader = useMemo<HeadersInit | undefined>(() => {
-    if (!session?.access_token) return undefined;
-    return { Authorization: `Bearer ${session.access_token}` };
-  }, [session]);
-
   const t = COPY[lang];
-  const isPro = quota?.isPro ?? false;
   const heroCopy = HERO_VARIANTS[heroVariant];
   const demoExample = DEMO_VARIANTS[heroVariant];
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
   const applyCropPreset = useCallback(
     async (preset: CropPreset) => {
@@ -513,11 +465,11 @@ export default function HomeClient({ lang }: HomeClientProps) {
     : PLAN_LABELS[lang].guest;
 
   const quotaLabel = quota
-    ? quota.isPro
-      ? t.quotaUnlimited
-      : `${quota.remaining ?? 0} / ${quota.limit ?? 0}`
+    ? `${quota.remaining ?? 0} / ${quota.limit ?? 0}`
     : "-";
-  const canGenerate = Boolean(text.trim() || (imageFile && isPro));
+  const canGenerate = Boolean(
+    (text.trim() || imageFile) && turnstileToken && turnstileSiteKey,
+  );
   const cropLabels: Record<CropPreset, string> = {
     original: t.cropOriginal,
     "1:1": t.cropSquare,
@@ -526,9 +478,7 @@ export default function HomeClient({ lang }: HomeClientProps) {
   };
 
   const fetchQuota = async () => {
-    const response = await fetch("/api/quota", {
-      headers: authHeader,
-    });
+    const response = await fetch("/api/quota");
     if (!response.ok) return;
     const data = await response.json();
     if (data.quota) {
@@ -539,27 +489,25 @@ export default function HomeClient({ lang }: HomeClientProps) {
   useEffect(() => {
     fetchQuota();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
-
-  useEffect(() => {
-    if (!isPro && mode !== "Standard") {
-      setMode("Standard");
-    }
-    if (!isPro && imageFile) {
-      setImageFile(null);
-      setRawImageFile(null);
-      setCropPreset("original");
-      updatePreview(null);
-    }
-  }, [isPro, mode, imageFile, updatePreview]);
+  }, []);
 
   const handleGenerate = async () => {
     setError(null);
     const trimmed = text.trim();
-    const hasImage = Boolean(imageFile && isPro);
+    const hasImage = Boolean(imageFile);
 
     if (!trimmed && !hasImage) {
       setError(t.emptyInput);
+      return;
+    }
+
+    if (!turnstileSiteKey) {
+      setError(t.captchaMisconfigured);
+      return;
+    }
+
+    if (!turnstileToken) {
+      setError(t.captchaMissing);
       return;
     }
 
@@ -599,12 +547,12 @@ export default function HomeClient({ lang }: HomeClientProps) {
     if (hasImage && imageFile) {
       formData.append("image", imageFile);
     }
+    formData.append("turnstileToken", turnstileToken);
 
     let response: Response;
     try {
       response = await safeFetch("/api/generate", {
         method: "POST",
-        headers: authHeader,
         body: formData,
         timeout: 60000,
         retries: 2,
@@ -615,11 +563,12 @@ export default function HomeClient({ lang }: HomeClientProps) {
         context: "generate",
         mode,
         hasImage,
-        userId: session?.user?.id
       });
       setError(t.genericError);
       setLoading(false);
       trackEvent("generate_error", buildEventProps({ mode, has_image: hasImage }));
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
       return;
     }
 
@@ -630,6 +579,8 @@ export default function HomeClient({ lang }: HomeClientProps) {
       if (data.quota) setQuota(data.quota);
       setLoading(false);
       trackEvent("generate_error", buildEventProps({ mode, has_image: hasImage }));
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
       return;
     }
 
@@ -637,6 +588,8 @@ export default function HomeClient({ lang }: HomeClientProps) {
     if (data.quota) setQuota(data.quota);
     setLoading(false);
     trackFunnel("generate_success", { mode, has_image: hasImage });
+    turnstileRef.current?.reset();
+    setTurnstileToken(null);
 
     const newItem: HistoryItem = {
       id: crypto.randomUUID(),
@@ -699,40 +652,11 @@ export default function HomeClient({ lang }: HomeClientProps) {
     });
   }, []);
 
-  const handleLogout = async () => {
-    await supabaseBrowser.auth.signOut();
-    setSession(null);
-  };
-
-  const handleWishlist = async () => {
-    setWishStatus(null);
-    const response = await fetch("/api/wishlist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(authHeader ?? {}) },
-      body: JSON.stringify({
-        email: session?.user.email ? undefined : wishEmail,
-        note: "Pro waitlist",
-        lang,
-        variant: heroVariant,
-      }),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      setWishStatus(data.error ?? t.wishError);
-      return;
-    }
-
-    setWishStatus(t.wishSuccess);
-    setWishEmail("");
-    trackFunnel("wish_submit", { mode });
-  };
-
   const handleFeedback = async (rating: 1 | -1) => {
     if (!result) return;
     const response = await fetch("/api/feedback", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...(authHeader ?? {}) },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         rating,
         mode,
@@ -831,21 +755,6 @@ export default function HomeClient({ lang }: HomeClientProps) {
               <span className="sr-only">{t.railTitle}: </span>
               {planLabel} · {quotaLabel}
             </div>
-            {session ? (
-              <button
-                onClick={handleLogout}
-                className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-zinc-200 transition hover:border-white/30 hover:bg-white/5 sm:px-4 sm:py-2 sm:text-xs"
-              >
-                {t.logout}
-              </button>
-            ) : (
-              <Link
-                href={localizePath("/login", lang)}
-                className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-zinc-200 transition hover:border-white/30 hover:bg-white/5 sm:px-4 sm:py-2 sm:text-xs"
-              >
-                {t.login}
-              </Link>
-            )}
           </div>
         </header>
 
@@ -1097,9 +1006,7 @@ export default function HomeClient({ lang }: HomeClientProps) {
             >
               <fieldset className="flex flex-wrap items-center justify-between gap-3 border-0 p-0 m-0">
                 <legend className="sr-only">{t.modeLegend}</legend>
-                <span className="text-xs text-zinc-400">
-                  {isPro ? t.badgePro : t.badgeStandard}
-                </span>
+                <span className="text-xs text-zinc-400">{t.badgeFree}</span>
                 <div
                   className="flex gap-1.5 text-[11px] sm:gap-2 sm:text-xs"
                   role="group"
@@ -1109,14 +1016,12 @@ export default function HomeClient({ lang }: HomeClientProps) {
                     <button
                       key={item}
                       onClick={() => setMode(item)}
-                      disabled={!isPro && item !== "Standard"}
                       aria-pressed={mode === item}
-                      aria-disabled={!isPro && item !== "Standard"}
                       className={`btn-press rounded-full px-2.5 py-1 transition ${
                         mode === item
                           ? "bg-white text-black"
                           : "border border-white/10 text-zinc-300 hover:border-white/30 hover:bg-white/5"
-                      } ${!isPro && item !== "Standard" ? "opacity-40 cursor-not-allowed" : ""} sm:px-3 sm:py-1`}
+                      } sm:px-3 sm:py-1`}
                     >
                       {item}
                     </button>
@@ -1163,7 +1068,6 @@ export default function HomeClient({ lang }: HomeClientProps) {
                       id="image-upload"
                       type="file"
                       accept="image/*"
-                      disabled={!isPro}
                       onChange={(event) => {
                         const file = event.target.files?.[0] ?? null;
                         if (!file) {
@@ -1195,11 +1099,9 @@ export default function HomeClient({ lang }: HomeClientProps) {
                       className="text-[11px] text-zinc-400 file:mr-2 file:rounded-full file:border-0 file:bg-white/10 file:px-2.5 file:py-1 file:text-[11px] file:text-white file:transition file:hover:bg-white/20 sm:text-xs sm:file:mr-3 sm:file:px-3 sm:file:py-1 sm:file:text-xs"
                     />
                   </div>
-                  {!isPro ? (
-                    <p className="text-[11px] text-zinc-500 sm:text-xs">
-                      {t.uploadHint}
-                    </p>
-                  ) : null}
+                  <p className="text-[11px] text-zinc-500 sm:text-xs">
+                    {t.uploadHint}
+                  </p>
                   <p className="text-[11px] text-zinc-500 sm:text-xs">
                     {t.uploadTypeHint}
                   </p>
@@ -1255,6 +1157,38 @@ export default function HomeClient({ lang }: HomeClientProps) {
                     </div>
                   ) : null}
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-white/10 bg-black/30 px-3 py-3 sm:mt-5 sm:rounded-2xl sm:px-4 sm:py-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 sm:text-xs">
+                    {t.captchaTitle}
+                  </p>
+                  <p className="text-[11px] text-zinc-500 sm:text-xs">
+                    {t.captchaHint}
+                  </p>
+                </div>
+                {turnstileSiteKey ? (
+                  <div className="mt-3">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={turnstileSiteKey}
+                      onVerify={(token) => {
+                        setError(null);
+                        setTurnstileToken(token);
+                      }}
+                      onExpire={() => setTurnstileToken(null)}
+                      onError={() => {
+                        setTurnstileToken(null);
+                        setError(t.captchaFailed);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-3 text-[11px] text-[#f6b73c] sm:text-xs">
+                    {t.captchaMisconfigured}
+                  </p>
+                )}
               </div>
 
               {error ? (
@@ -1363,7 +1297,7 @@ export default function HomeClient({ lang }: HomeClientProps) {
                     </p>
                   </div>
 
-                  {isPro && result.affiliate ? (
+                  {result.affiliate ? (
                     <div className="rounded-xl border border-[#2ceef0]/40 bg-[#2ceef0]/10 p-3 sm:rounded-2xl sm:p-4">
                       <p className="text-sm text-white">
                         {result.affiliate.text[lang]}
@@ -1490,86 +1424,7 @@ export default function HomeClient({ lang }: HomeClientProps) {
                 </p>
               </div>
 
-              {!isPro ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:rounded-3xl sm:p-6">
-                  <h3 className="text-base font-semibold sm:text-lg">
-                    {t.wishTitle}
-                  </h3>
-                  <p className="mt-1.5 text-sm text-zinc-400 sm:mt-2">
-                    {t.wishDesc}
-                  </p>
-                  {!session ? (
-                    <div>
-                      <label htmlFor="wish-email" className="sr-only">
-                        {t.wishPlaceholder}
-                      </label>
-                      <input
-                        id="wish-email"
-                        value={wishEmail}
-                        onChange={(event) => setWishEmail(event.target.value)}
-                        type="email"
-                        placeholder={t.wishPlaceholder}
-                        className="mt-3 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[#f6b73c] focus:ring-2 focus:ring-[#f6b73c]/30 sm:mt-4 sm:rounded-2xl sm:px-4 sm:py-3"
-                      />
-                    </div>
-                  ) : null}
-                  <button
-                    onClick={handleWishlist}
-                    disabled={
-                      wishStatus === t.wishSuccess || (!session && !wishEmail)
-                    }
-                    className="btn-press mt-3 w-full rounded-xl border border-[#f6b73c]/40 bg-[#f6b73c]/10 py-2.5 text-[11px] font-semibold text-[#f6b73c] transition hover:border-[#f6b73c] hover:bg-[#f6b73c]/20 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-4 sm:rounded-2xl sm:py-3 sm:text-xs"
-                  >
-                    {wishStatus === t.wishSuccess
-                      ? "✓ " + t.wishSuccess
-                      : t.wishButton}
-                  </button>
-                </div>
-              ) : null}
             </aside>
-          </div>
-        </section>
-
-        <section id="tiers" className="space-y-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-zinc-500">
-              {lang === "zh" ? "权限" : "Access"}
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold">
-              <span itemProp="name">
-                {lang === "zh" ? "访客 / 用户 / Pro" : "Guest / User / Pro"}
-              </span>
-            </h2>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {TIERS.map((tier) => (
-              <div
-                key={tier.name.en}
-                className="rounded-3xl border border-white/10 bg-black/40 p-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    {pick(lang, tier.name)}
-                  </h3>
-                  {tier.badge ? (
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-zinc-300">
-                      {pick(lang, tier.badge)}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {pick(lang, tier.description)}
-                </p>
-                <ul className="mt-4 space-y-2 text-sm text-zinc-200">
-                  {tier.features.map((feature) => (
-                    <li key={feature.en} className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#2ceef0]" />
-                      {pick(lang, feature)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
           </div>
         </section>
 
@@ -1755,11 +1610,9 @@ export default function HomeClient({ lang }: HomeClientProps) {
         </button>
       </div>
 
-      {!isPro ? (
-        <div className="fixed bottom-6 left-1/2 z-20 hidden w-[min(92vw,820px)] -translate-x-1/2 rounded-full border border-white/10 bg-black/70 px-6 py-3 text-center text-xs text-zinc-300 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur sm:block">
-          {t.adBanner}
-        </div>
-      ) : null}
+      <div className="fixed bottom-6 left-1/2 z-20 hidden w-[min(92vw,820px)] -translate-x-1/2 rounded-full border border-white/10 bg-black/70 px-6 py-3 text-center text-xs text-zinc-300 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur sm:block">
+        {t.adBanner}
+      </div>
 
       {/* Online/Offline Status Indicator */}
       <OnlineStatus position="bottom" />

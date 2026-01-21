@@ -51,7 +51,7 @@ export const HERO_BULLETS: Localized[] = [
     en: "3 tone modes: Standard / Savage / Rizz",
     zh: "3 种语气：Standard / Savage / Rizz",
   },
-  { en: "Image input for Pro (Vision)", zh: "Pro 支持识图输入" },
+  { en: "Image input (Vision)", zh: "支持识图输入" },
   { en: "English + Chinese", zh: "英文 + 中文" },
 ];
 
@@ -92,12 +92,12 @@ export const STATS: Stat[] = [
     label: { en: "Free daily generations", zh: "每日免费生成次数" },
   },
   {
-    value: { en: "20+", zh: "20+" },
-    label: { en: "Free with sign-up", zh: "注册即可享" },
+    value: { en: "No login", zh: "无需登录" },
+    label: { en: "Start instantly", zh: "即开即用" },
   },
   {
-    value: { en: "Unlimited", zh: "无限" },
-    label: { en: "Pro generations", zh: "Pro 版本专属" },
+    value: { en: "Captcha", zh: "验证码" },
+    label: { en: "Protected usage", zh: "验证后使用" },
   },
   {
     value: { en: "2", zh: "2" },
@@ -126,8 +126,8 @@ export const FEATURES: Feature[] = [
     icon: "👁️",
     title: { en: "Vision upload", zh: "识图功能" },
     description: {
-      en: "Upload any photo and let AI detect objects for contextual captions (Pro feature).",
-      zh: "上传照片即可自动识别物体，生成更贴合场景的文案（Pro 功能）。",
+      en: "Upload any photo and let AI detect objects for contextual captions.",
+      zh: "上传照片即可自动识别物体，生成更贴合场景的文案。",
     },
   },
   {
@@ -158,45 +158,18 @@ export const FEATURES: Feature[] = [
 
 export const TIERS: Tier[] = [
   {
-    name: { en: "Guest", zh: "访客" },
+    name: { en: "Free", zh: "免费" },
+    badge: { en: "No login", zh: "无需登录" },
     description: {
-      en: "Try it free with no sign-up required. Perfect for quick tests.",
-      zh: "无需注册即可免费试用，适合快速体验。",
+      en: "Everything is free to use with captcha verification.",
+      zh: "全功能免费使用，仅需完成验证码。",
     },
     features: [
       { en: "3 generations per day", zh: "每日 3 次生成机会" },
-      { en: "Standard mode only", zh: "仅限 Standard 模式" },
-      { en: "Text input supported", zh: "支持文字输入" },
-      { en: "Ad-supported experience", zh: "包含广告展示" },
-    ],
-  },
-  {
-    name: { en: "User", zh: "用户" },
-    badge: { en: "Free account", zh: "免费账户" },
-    description: {
-      en: "For daily creators who need more quota and full tone access.",
-      zh: "适合日常创作者，提供更多配额并解锁全部语气模式。",
-    },
-    features: [
-      { en: "20 generations per day", zh: "每日 20 次生成机会" },
       { en: "All 3 tone modes", zh: "解锁全部 3 种语气模式" },
-      { en: "Local history (last 50)", zh: "本地历史记录（最近 50 条）" },
-      { en: "No banner ads", zh: "无 Banner 广告干扰" },
-    ],
-  },
-  {
-    name: { en: "Pro", zh: "Pro" },
-    badge: { en: "Coming soon", zh: "即将推出" },
-    description: {
-      en: "Unlimited generations, vision upload, affiliate cards, and priority support.",
-      zh: "无限生成次数、识图上传、智能推荐卡片及优先支持。",
-    },
-    features: [
-      { en: "Unlimited generations", zh: "无限生成次数" },
       { en: "Vision image upload", zh: "图片识别与上传" },
-      { en: "Smart affiliate cards", zh: "智能产品推荐卡片" },
-      { en: "Priority AI processing", zh: "AI 优先处理队列" },
-      { en: "Early access to new features", zh: "新功能抢先体验" },
+      { en: "Captcha-protected usage", zh: "验证码保护使用" },
+      { en: "Local history (last 3)", zh: "本地历史记录（最近 3 条）" },
     ],
   },
 ];
@@ -409,8 +382,8 @@ export const FAQS: FAQ[] = [
   {
     question: { en: "How do daily quotas work?", zh: "每日配额如何计算？" },
     answer: {
-      en: "Guests receive 3 generations per day. Logged-in users get 20 per day. Quotas reset at 00:00 UTC. Pro members enjoy unlimited generations.",
-      zh: "访客每日可获得 3 次生成机会，登录用户每日 20 次，配额于 UTC 00:00 重置。Pro 会员享受无限生成。",
+      en: "Each device receives 3 generations per day. Quotas reset at 00:00 UTC. Complete the captcha to generate.",
+      zh: "每个设备每日可获得 3 次生成机会，配额于 UTC 00:00 重置。完成验证码后即可生成。",
     },
   },
   {
@@ -425,12 +398,12 @@ export const FAQS: FAQ[] = [
   },
   {
     question: {
-      en: "When will Pro features launch?",
-      zh: "Pro 功能什么时候上线？",
+      en: "Is there a paid plan?",
+      zh: "有付费版本吗？",
     },
     answer: {
-      en: "Pro is currently in development and will include unlimited generations, vision upload, smart affiliate cards, and priority support. Join the waitlist to be notified first.",
-      zh: "Pro 版本正在开发中，将包含无限生成、识图上传、智能推荐卡片及优先支持功能。加入等待名单可第一时间收到通知。",
+      en: "Not at the moment. LitStatus is free to use, no login required.",
+      zh: "暂时没有。LitStatus 目前完全免费，无需登录即可使用。",
     },
   },
   {
@@ -459,8 +432,8 @@ export const FAQS: FAQ[] = [
       zh: "物体识别的准确度如何？",
     },
     answer: {
-      en: "Vision detection works well for common objects when photos are clear and well-lit. Pro users get the most accurate results with our enhanced detection model.",
-      zh: "在照片清晰、光线充足的情况下，识图功能对常见物体的识别效果很好。Pro 用户可使用增强识别模型，获得最准确的结果。",
+      en: "Vision detection works well for common objects when photos are clear and well-lit.",
+      zh: "在照片清晰、光线充足的情况下，识图功能对常见物体的识别效果很好。",
     },
   },
   {
@@ -469,8 +442,8 @@ export const FAQS: FAQ[] = [
       zh: "推荐功能是如何运作的？",
     },
     answer: {
-      en: "When an object is detected in your image, we match it to curated product categories. Pro users see full affiliate cards with direct purchase links.",
-      zh: "当在图片中识别到物体时，我们会将其匹配到精选的产品类别。Pro 用户可看到完整的推荐卡片及直接购买链接。",
+      en: "When an object is detected in your image, we match it to curated product categories to suggest relevant items.",
+      zh: "当在图片中识别到物体时，我们会将其匹配到精选的产品类别，给出相关建议。",
     },
   },
 ];
@@ -479,8 +452,8 @@ export const STEPS: Step[] = [
   {
     title: { en: "Describe your moment", zh: "描述您的场景" },
     description: {
-      en: "Enter what's happening or upload a photo (Pro feature).",
-      zh: "输入场景描述或上传照片（Pro 功能）。",
+      en: "Enter what's happening or upload a photo.",
+      zh: "输入场景描述或上传照片。",
     },
   },
   {

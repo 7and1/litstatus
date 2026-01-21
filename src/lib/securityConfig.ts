@@ -166,6 +166,10 @@ export function validateSecurityEnv(): {
     errors.push("OPENAI_API_KEY is required");
   }
 
+  if (!process.env.TURNSTILE_SECRET_KEY && !process.env.CF_TURNSTILE_SECRET_KEY) {
+    errors.push("TURNSTILE_SECRET_KEY is required");
+  }
+
   return {
     valid: errors.length === 0,
     errors,

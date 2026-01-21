@@ -320,9 +320,10 @@ export function getApiCspHeaders(): Record<string, string> {
 export function getPageCspHeaders(nonce: string): Record<string, string> {
   const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC ?? "https://plausible.io";
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+  const turnstileOrigin = "https://challenges.cloudflare.com";
 
   // Build script-src with nonce for external analytics
-  const scriptSrcParts = ["'self'", `'nonce-${nonce}'`];
+  const scriptSrcParts = ["'self'", `'nonce-${nonce}'`, turnstileOrigin];
 
   // Add Google Analytics if configured
   if (process.env.NEXT_PUBLIC_GA_ID) {
@@ -348,8 +349,8 @@ export function getPageCspHeaders(nonce: string): Record<string, string> {
       `style-src 'self' 'nonce-${nonce}'`, // For inline styles
       `img-src 'self' data: https: blob:`,
       `font-src 'self' data:`,
-      `connect-src 'self' https://*.supabase.co https://api.openai.com https://api.resend.com ${plausibleSrc}`,
-      `frame-src 'none'`,
+      `connect-src 'self' https://*.supabase.co https://api.openai.com https://api.resend.com ${plausibleSrc} ${turnstileOrigin}`,
+      `frame-src ${turnstileOrigin}`,
       `frame-ancestors 'none'`,
       `base-uri 'self'`,
       `form-action 'self'`,
