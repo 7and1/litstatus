@@ -1,8 +1,14 @@
 # Cloudflare Pages Configuration
 # Copy this file to wrangler.toml and fill in your values
 # wrangler.toml is git-ignored for security
+#
+# Account ID can be set via environment variable:
+#   export CLOUDFLARE_ACCOUNT_ID=your_account_id
+# Or set in wrangler.toml (not recommended for public repos):
+#   account_id = "your_account_id"
 
 name = "litstatus"
+# account_id = "" # Use CLOUDFLARE_ACCOUNT_ID environment variable instead
 compatibility_date = "2024-12-01"
 pages_build_output_dir = ".vercel/output/static"
 
