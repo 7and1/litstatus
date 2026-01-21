@@ -488,7 +488,7 @@ export default function HomeClient({ lang }: HomeClientProps) {
 
   useEffect(() => {
     fetchQuota();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const handleGenerate = async () => {

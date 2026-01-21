@@ -34,6 +34,7 @@ const nextConfig: NextConfig = {
   // Bundle analyzer configuration
   ...(isAnalyzer && {
     webpack: (config, { isServer }) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const bundleAnalyzer = require("@next/bundle-analyzer")({
         enabled: isAnalyzer,
       });

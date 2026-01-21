@@ -123,6 +123,7 @@ export async function GET(request: Request) {
     }
 
     // Constant-time comparison to prevent timing attacks
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const crypto = require("crypto");
     if (!token || !crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))) {
       await logSecurityEvent({

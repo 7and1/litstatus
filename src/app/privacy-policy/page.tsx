@@ -53,7 +53,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">1. Our Privacy Commitment</h2>
             <p className="text-zinc-300 mb-4">
-              At LitStatus, we believe privacy is a fundamental right. This Privacy Policy explains how we handle your information. Simply put: <strong>we don't store your content, and we don't sell your data.</strong>
+              At LitStatus, we believe privacy is a fundamental right. This Privacy Policy explains how we handle your information. Simply put: <strong>we don&apos;t store your content, and we don&apos;t sell your data.</strong>
             </p>
           </section>
 

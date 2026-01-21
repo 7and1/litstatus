@@ -52,14 +52,14 @@ export default function TermsOfServicePageZh() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">1. 接受条款</h2>
             <p className="text-zinc-300 mb-4">
-              访问或使用 LitStatus（"服务"）即表示您同意受本服务条款（"条款"）约束。若您不同意本条款，请勿使用我们的服务。
+              访问或使用 LitStatus（&quot;服务&quot;）即表示您同意受本服务条款（&quot;条款&quot;）约束。若您不同意本条款，请勿使用我们的服务。
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">2. 服务描述</h2>
             <p className="text-zinc-300 mb-4">
-              LitStatus 是一款 AI 驱动的文案生成服务，帮助用户为社媒内容创建文案与标签。本服务按"现状"提供，不提供任何形式的担保。
+              LitStatus 是一款 AI 驱动的文案生成服务，帮助用户为社媒内容创建文案与标签。本服务按&quot;现状&quot;提供，不提供任何形式的担保。
             </p>
           </section>
 
@@ -117,7 +117,7 @@ export default function TermsOfServicePageZh() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">7. 免责声明</h2>
             <p className="text-zinc-300 mb-4">
-              本服务按"现状"提供，不提供任何明示或暗示的担保。我们免除所有担保，包括但不限于：
+              本服务按&quot;现状&quot;提供，不提供任何明示或暗示的担保。我们免除所有担保，包括但不限于：
             </p>
             <ul className="list-disc list-inside text-zinc-300 mb-4 space-y-2">
               <li>生成内容的准确性或可靠性</li>

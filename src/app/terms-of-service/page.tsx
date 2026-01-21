@@ -52,14 +52,14 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">1. Acceptance of Terms</h2>
             <p className="text-zinc-300 mb-4">
-              By accessing or using LitStatus (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use our Service.
+              By accessing or using LitStatus (the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, please do not use our Service.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">2. Description of Service</h2>
             <p className="text-zinc-300 mb-4">
-              LitStatus is an AI-powered caption generation service that helps users create captions and hashtags for social media content. The Service is provided "as is" without warranty of any kind.
+              LitStatus is an AI-powered caption generation service that helps users create captions and hashtags for social media content. The Service is provided &quot;as is&quot; without warranty of any kind.
             </p>
           </section>
 
@@ -117,7 +117,7 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">7. Disclaimers</h2>
             <p className="text-zinc-300 mb-4">
-              THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO:
+              THE SERVICE IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO:
             </p>
             <ul className="list-disc list-inside text-zinc-300 mb-4 space-y-2">
               <li>Accuracy or reliability of generated content</li>
